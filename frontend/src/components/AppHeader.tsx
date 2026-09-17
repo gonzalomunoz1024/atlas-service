@@ -27,7 +27,7 @@ export function AppHeader({
 }: Props) {
   return (
     <header className="glass sticky top-0 z-40 border-b border-stroke-light">
-      <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-4 px-4 sm:px-6">
+      <div className="flex h-14 w-full items-center gap-4 px-4 sm:px-6">
         <button
           onClick={onHome}
           className="flex items-center gap-2 text-primary transition-opacity hover:opacity-70"
