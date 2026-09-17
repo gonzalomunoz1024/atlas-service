@@ -12,9 +12,11 @@ VERSION="1.0.0"
 STAGE="dist-app/stage"
 JAR="atlas-dashboard.jar"
 
-build_jar() {
+build_jar() (
+  # subshell + set -e so any failing step aborts the whole build attempt
+  set -e
   echo "▸ 1/4 building frontend"
-  (cd frontend && { npm ci --silent 2>/dev/null || npm install --silent; } && npx vite build)
+  cd frontend && { npm ci --silent 2>/dev/null || npm install --silent; } && npx vite build && cd ..
 
   echo "▸ 2/4 embedding UI into the backend"
   rm -rf backend/src/main/resources/static
@@ -23,14 +25,17 @@ build_jar() {
 
   echo "▸ 3/4 building fat jar"
   # -s settings-public.xml goes straight to Maven Central, bypassing any corporate
-  # Artifactory mirror configured in ~/.m2/settings.xml
-  (cd backend && ./mvnw -q -s .mvn/settings-public.xml package -DskipTests)
-}
+  # Artifactory mirror configured in ~/.m2/settings.xml. NOTE: if the network blocks
+  # Maven Central entirely (mvnw can't even download Maven), this fails and the
+  # prebuilt jar below is used instead.
+  cd backend && ./mvnw -q -s .mvn/settings-public.xml package -DskipTests
+)
 
 rm -rf dist-app
 mkdir -p "$STAGE"
 
-if build_jar; then
+# SKIP_BUILD=1 ./scripts/package-mac.sh → go straight to the committed prebuilt jar
+if [ "${SKIP_BUILD:-0}" != "1" ] && build_jar; then
   cp backend/target/atlas-dashboard-*.jar "$STAGE/$JAR"
   # keep the committed fallback fresh for machines that can't build
   cp "$STAGE/$JAR" prebuilt/atlas-dashboard.jar
