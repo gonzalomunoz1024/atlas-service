@@ -1,0 +1,10 @@
+# dependencies
+node_modules/
+
+# build outputs
+frontend/dist/
+backend/target/
+
+# OS / editor
+.DS_Store
+*.log

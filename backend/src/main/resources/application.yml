@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: atlas-dashboard
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+
+atlas:
+  flow:
+    # cadence of the simulated live-flow event stream pushed over /ws/flow
+    emit-interval-ms: 900
