@@ -75,6 +75,15 @@ The frontend synthesizes all data locally, so a demo survives the backend being 
 cd frontend && npm run demo      # or just append ?demo to the URL
 ```
 
+### Shareable macOS app (nothing to install)
+Build a double-clickable `Atlas` app — UI + backend + a bundled Java runtime in one DMG:
+```bash
+./scripts/package-mac.sh         # → dist-app/Atlas-1.0.0.dmg (~80 MB)
+```
+Share the DMG. The recipient opens it, launches **Atlas** (right-click → Open the first
+time, since the app is unsigned), and the dashboard opens itself in their browser at
+`localhost:8080`. Built on Apple Silicon → runs on Apple Silicon Macs.
+
 ---
 
 ## Demo script (≈2 min)
