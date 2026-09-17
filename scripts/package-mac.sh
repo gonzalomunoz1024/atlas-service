@@ -34,16 +34,25 @@ build_jar() (
 rm -rf dist-app
 mkdir -p "$STAGE"
 
-# SKIP_BUILD=1 ./scripts/package-mac.sh → go straight to the committed prebuilt jar
-if [ "${SKIP_BUILD:-0}" != "1" ] && build_jar; then
+use_prebuilt() {
+  [ -f prebuilt/atlas-dashboard.jar ] || { echo "✗ prebuilt/atlas-dashboard.jar missing"; exit 1; }
+  cp prebuilt/atlas-dashboard.jar "$STAGE/$JAR"
+}
+
+# Preflight: can this machine even reach Maven Central? (locked-down corporate
+# networks block it, which also stops mvnw from bootstrapping Maven). If not —
+# or if SKIP_BUILD=1 — use the committed prebuilt jar with the UI embedded.
+if [ "${SKIP_BUILD:-0}" = "1" ] || ! curl -s --max-time 5 -o /dev/null https://repo.maven.apache.org/maven2/; then
+  echo "▸ 1-3/4 skipped — Maven Central unreachable (or SKIP_BUILD=1); using prebuilt/atlas-dashboard.jar"
+  use_prebuilt
+elif build_jar; then
   cp backend/target/atlas-dashboard-*.jar "$STAGE/$JAR"
   # keep the committed fallback fresh for machines that can't build
   cp "$STAGE/$JAR" prebuilt/atlas-dashboard.jar
 else
   echo
   echo "⚠ build failed — falling back to the committed prebuilt jar (UI already embedded)"
-  [ -f prebuilt/atlas-dashboard.jar ] || { echo "✗ prebuilt/atlas-dashboard.jar missing"; exit 1; }
-  cp prebuilt/atlas-dashboard.jar "$STAGE/$JAR"
+  use_prebuilt
 fi
 
 echo "▸ 4/4 packaging Atlas.app + DMG (bundles a Java runtime — nothing to install)"
