@@ -11,7 +11,7 @@ import { NodeModal } from './NodeModal'
 import { GraphLegend } from './GraphLegend'
 import { MissingLinksPanel } from './MissingLinksPanel'
 import { IncomingTracesPanel, toIncoming, type IncomingTrace } from './IncomingTracesPanel'
-import { EdgeHealthSettings, type HealthSettings } from './EdgeHealthSettings'
+import { DEFAULT_MAX_DEPTH, EdgeHealthSettings, type HealthSettings } from './EdgeHealthSettings'
 import type { RepoRevisions } from '../types/atlas'
 import type { RepoView } from './EnvironmentSelector'
 import { CoverageTable } from './CoverageTable'
@@ -58,6 +58,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   // link health from observed error rate over a rolling window (gear-configurable)
   const [healthSettings, setHealthSettings] = useState<HealthSettings>({ errorThreshold: 0.1, windowMin: 15 })
+  // how many hops out from the source repository the map reaches (gear-configurable, 1–8)
+  const [maxDepth, setMaxDepth] = useState(DEFAULT_MAX_DEPTH)
   const [edgeHealth, setEdgeHealth] = useState<Map<string, 'ok' | 'error'>>(new Map())
   const errWindow = useRef<Map<string, { ts: number; err: boolean }[]>>(new Map())
 
@@ -145,6 +147,40 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       return () => clearTimeout(t)
     }
   }, [map, component, revCommit, repoView])
+
+  // the map only reaches maxDepth hops (undirected BFS) from the source repository — callers
+  // and callees both count as one hop, and an edge shows only when both ends are in reach
+  const visible = useMemo(() => {
+    if (!map) return null
+    const center = map.nodes.find((n) => n.center)
+    if (!center) return { nodes: map.nodes, edges: map.edges }
+    const adj = new Map<string, string[]>()
+    for (const e of map.edges) {
+      adj.set(e.source, [...(adj.get(e.source) ?? []), e.target])
+      adj.set(e.target, [...(adj.get(e.target) ?? []), e.source])
+    }
+    const depth = new Map<string, number>([[center.id, 0]])
+    let frontier = [center.id]
+    while (frontier.length > 0) {
+      const next: string[] = []
+      for (const id of frontier) {
+        for (const nb of adj.get(id) ?? []) {
+          if (!depth.has(nb)) {
+            depth.set(nb, depth.get(id)! + 1)
+            next.push(nb)
+          }
+        }
+      }
+      frontier = next
+    }
+    const keep = new Set(
+      map.nodes.filter((n) => (depth.get(n.id) ?? Infinity) <= maxDepth).map((n) => n.id),
+    )
+    return {
+      nodes: map.nodes.filter((n) => keep.has(n.id)),
+      edges: map.edges.filter((e) => keep.has(e.source) && keep.has(e.target)),
+    }
+  }, [map, maxDepth])
 
   // the endpoint selected in the inspect panel resolves to its downstream sub-flow (from DeepWiki)
   const endpointFlow = useMemo(
@@ -353,7 +389,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const paletteCommands = useMemo<PaletteCommand[]>(() => {
     if (!map) return []
     const center = map.nodes.find((n) => n.center)
-    const nodeCmds: PaletteCommand[] = map.nodes.map((n) => ({
+    // only nodes within the configured depth are on the map, so only those are jumpable
+    const nodeCmds: PaletteCommand[] = (visible?.nodes ?? map.nodes).map((n) => ({
       id: `node-${n.id}`,
       group: 'Nodes',
       label: n.name,
@@ -410,7 +447,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
     ]
     return [...actions, ...nodeCmds]
-  }, [map, component, repoView])
+  }, [map, visible, component, repoView])
 
   const header = (
     <AppHeader
@@ -491,8 +528,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         <ErrorBoundary label="The graph">
           <GraphCanvas
             ref={graphRef}
-            nodes={map.nodes}
-            edges={map.edges}
+            nodes={visible?.nodes ?? map.nodes}
+            edges={visible?.edges ?? map.edges}
             selectedId={selected?.id ?? inspectId ?? undefined}
             highlightIds={effectiveHighlight ?? undefined}
             dimUnhighlighted={effectiveDim}
@@ -553,7 +590,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           <GraphLegend
             hiddenKinds={hiddenKinds}
             onToggle={toggleKind}
-            present={new Set(map.nodes.map((n) => n.kind))}
+            present={new Set((visible?.nodes ?? map.nodes).map((n) => n.kind))}
           />
           <ObservabilityMenu
             coverage={running ? map.coverage : undefined}
@@ -561,13 +598,18 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
             onOverview={() => openRootModal('overview')}
           />
-          <EdgeHealthSettings settings={healthSettings} onChange={setHealthSettings} />
+          <EdgeHealthSettings
+            settings={healthSettings}
+            onChange={setHealthSettings}
+            maxDepth={maxDepth}
+            onMaxDepth={setMaxDepth}
+          />
         </div>
 
         {/* missing links — the actual job, top-right (hidden for undeployed commits: no data) */}
         {running && (
           <div className="absolute right-4 top-4">
-            <MissingLinksPanel edges={map.edges} onFocus={focusEdge} pulse={insightPulse} />
+            <MissingLinksPanel edges={visible?.edges ?? map.edges} onFocus={focusEdge} pulse={insightPulse} />
           </div>
         )}
 
