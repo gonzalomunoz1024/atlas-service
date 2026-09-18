@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
-import type { TraceDetail, TraceSummary, WikiDoc } from '../types/atlas'
+import type { EnhancementPlan, TraceDetail, TraceSummary, WikiDoc } from '../types/atlas'
 import { Drawer, useOverlayClose } from './ui/Overlay'
 import { TraceWaterfall } from './TraceWaterfall'
 import { Icon } from './ui/Icons'
@@ -9,7 +9,7 @@ import { Select } from './ui/Select'
 import { StatusDot } from './ui/StatusDot'
 import { Skeleton } from './ui/Skeleton'
 import { EmptyState } from './ui/EmptyState'
-import { EnhancementContent } from './EnhancementContent'
+import { DiffBlock, EnhancementContent } from './EnhancementContent'
 import { CopyButton } from './CopyButton'
 import { cx } from '../lib/cx'
 
@@ -352,20 +352,18 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
   )
 }
 
-/** Contextual fix for an edge whose live error rate crossed the threshold. */
+/**
+ * Contextual fix for an edge whose live error rate crossed the threshold. The measurement banner
+ * is client data (it IS the observation being reported); the remediation plan — rationale, diff,
+ * alerts — comes from the enhancement port, same as every other fix.
+ */
 function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }) {
-  const alert = `grafana: rate(${fix.sourceName} → ${fix.targetName} errors) > ${fix.thresholdPct}% for 5m → page owning team`
-  const diff = [
-    `--- a/src/main/java/com/acme/${fix.sourceName.toLowerCase().replace(/\s+/g, '-')}/DownstreamClient.java`,
-    `+++ b/src/main/java/com/acme/${fix.sourceName.toLowerCase().replace(/\s+/g, '-')}/DownstreamClient.java`,
-    '@@',
-    ' return webClient.post()',
-    '     .retrieve()',
-    '     .bodyToMono(Response.class)',
-    '+    .retryWhen(Retry.backoff(3, Duration.ofMillis(120))',
-    '+        .filter(TransientException.class::isInstance))',
-    '+    .timeout(Duration.ofSeconds(2))',
-  ].join('\n')
+  const [plan, setPlan] = useState<EnhancementPlan | null>(null)
+
+  useEffect(() => {
+    api.errorRateEnhancement(fix.sourceName, fix.targetName).then(setPlan).catch(() => setPlan(null))
+  }, [fix.sourceName, fix.targetName])
+
   return (
     <div className="space-y-5">
       <div className="rounded-md border border-critical/30 bg-critical-tint p-3 text-sm">
@@ -378,33 +376,42 @@ function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }
         </p>
       </div>
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Fix</h3>
-        <ul className="space-y-1.5 text-sm text-secondary">
-          <li className="flex gap-2"><span className="text-accent">•</span>Add bounded retry with backoff and a hard timeout on the call.</li>
-          <li className="flex gap-2"><span className="text-accent">•</span>Alert on the sustained error rate so regressions page the owning team.</li>
-          <li className="flex gap-2"><span className="text-accent">•</span>Use the traces tab to find the failing requests and their logs.</li>
-        </ul>
-      </div>
+      {!plan ? (
+        <Skeleton className="h-48" />
+      ) : (
+        <>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Fix</h3>
+            <ul className="space-y-1.5 text-sm text-secondary">
+              {plan.rationale.map((r, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-accent">•</span>
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-      <div>
-        <div className="mb-1.5 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-primary">Suggested Diff</h3>
-          <CopyButton text={diff} />
-        </div>
-        <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed">
-          {diff.split('\n').map((line, i) => (
-            <div key={i} className={line.startsWith('+') ? 'text-healthy' : 'text-secondary'}>
-              {line || ' '}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-primary">Suggested Diff</h3>
+              <CopyButton text={plan.diff} />
             </div>
-          ))}
-        </pre>
-      </div>
+            <DiffBlock diff={plan.diff} />
+          </div>
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Alert</h3>
-        <p className="rounded-sm bg-surface-secondary p-2 font-mono text-caption text-secondary">{alert}</p>
-      </div>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Alerts</h3>
+            <ul className="space-y-1.5">
+              {plan.suggestedAlerts.map((a, i) => (
+                <li key={i} className="rounded-sm bg-surface-secondary p-2 font-mono text-caption text-secondary">
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -62,24 +62,7 @@ export function EnhancementContent({ component }: { component: string }) {
           <h3 className="text-sm font-semibold text-primary">Suggested Diff</h3>
           <CopyButton text={plan.diff} />
         </div>
-        <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed">
-          {plan.diff.split('\n').map((line, i) => (
-            <div
-              key={i}
-              className={
-                line.startsWith('#')
-                  ? 'font-semibold text-primary'
-                  : line.startsWith('+')
-                    ? 'text-healthy'
-                    : line.startsWith('-') && !line.startsWith('---')
-                      ? 'text-critical'
-                      : 'text-secondary'
-              }
-            >
-              {line || ' '}
-            </div>
-          ))}
-        </pre>
+        <DiffBlock diff={plan.diff} />
       </div>
 
       <div>
@@ -93,9 +76,38 @@ export function EnhancementContent({ component }: { component: string }) {
         </ul>
       </div>
 
-      <Button variant="primary" className="w-full py-2.5">
+      <Button
+        variant="primary"
+        className="w-full py-2.5 disabled:opacity-50"
+        disabled
+        title="Opens the PR through your git provider — not available against mock data"
+      >
         Open Pull Request
       </Button>
     </div>
+  )
+}
+
+/** Unified diff renderer — `#` lines are repo section headers, +/- colour as usual. */
+export function DiffBlock({ diff }: { diff: string }) {
+  return (
+    <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed">
+      {diff.split('\n').map((line, i) => (
+        <div
+          key={i}
+          className={
+            line.startsWith('#')
+              ? 'font-semibold text-primary'
+              : line.startsWith('+')
+                ? 'text-healthy'
+                : line.startsWith('-') && !line.startsWith('---')
+                  ? 'text-critical'
+                  : 'text-secondary'
+          }
+        >
+          {line || ' '}
+        </div>
+      ))}
+    </pre>
   )
 }

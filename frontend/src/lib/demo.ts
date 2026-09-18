@@ -690,6 +690,38 @@ function buildEnhancement(component: string): EnhancementPlan {
   }
 }
 
+function buildErrorRatePlan(component: string, target: string): EnhancementPlan {
+  // mirrors MockRepoEnhancementAdapter.errorRatePlan
+  const s = slug(component)
+  const t = slug(target)
+  const targetName = NAME_BY_ID.get(t) ?? target
+  const owned = NODES.find((n) => n.id === s)?.app === OUR_APP
+  const diff = [
+    `# caller — github.com/acme/${s}`,
+    `--- a/src/main/java/com/acme/${s}/DownstreamClient.java`,
+    `+++ b/src/main/java/com/acme/${s}/DownstreamClient.java`,
+    '@@ bound the failure: retry transient errors, cap the wait',
+    ' return webClient.post()',
+    '     .retrieve()',
+    '     .bodyToMono(Response.class)',
+    '+    .retryWhen(Retry.backoff(3, Duration.ofMillis(120))',
+    '+        .filter(TransientException.class::isInstance))',
+    '+    .timeout(Duration.ofSeconds(2))',
+  ].join('\n')
+  return {
+    component,
+    owned,
+    summary: `${component} → ${targetName} is erroring above the configured threshold. Bound the failure with retry + timeout on the caller, and alert on the sustained rate so regressions page the owning team.`,
+    rationale: [
+      `Add bounded retry with backoff and a hard timeout on the call to ${targetName}.`,
+      'Alert on the sustained error rate so regressions page the owning team.',
+      'Use the traces tab to find the failing requests and their logs.',
+    ],
+    diff,
+    suggestedAlerts: [`grafana: rate(${s} → ${t} errors) > threshold for 5m → page owning team`],
+  }
+}
+
 function buildWiki(nodeId: string): WikiDoc {
   const rand = seeded(nodeId + ':wiki')
   const spec = NODES.find((n) => n.id === nodeId)
@@ -827,4 +859,5 @@ export const demo = {
   syntheticFromTrace: (traceId: string, node?: string, endpoint?: string) =>
     wait(buildSynthetic(traceId, node, endpoint)),
   enhancement: (component: string) => wait(buildEnhancement(component)),
+  errorRateEnhancement: (component: string, target: string) => wait(buildErrorRatePlan(component, target)),
 }

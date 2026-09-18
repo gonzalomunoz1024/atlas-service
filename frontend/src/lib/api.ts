@@ -103,4 +103,11 @@ export const api = {
 
   enhancement: (component: string): Promise<EnhancementPlan> =>
     DEMO_MODE ? demo.enhancement(component) : post(`/v1/enhancements/${encodeURIComponent(component)}`),
+
+  errorRateEnhancement: (component: string, target: string): Promise<EnhancementPlan> =>
+    DEMO_MODE
+      ? demo.errorRateEnhancement(component, target)
+      : post(
+          `/v1/enhancements/${encodeURIComponent(component)}/error-rate?target=${encodeURIComponent(target)}`,
+        ),
 }

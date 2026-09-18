@@ -101,4 +101,38 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                             "grafana: rate(opa.decide.error) > 2% for 10m → warn #guardrails-oncall"));
         });
     }
+
+    @Override
+    public Mono<EnhancementPlan> errorRatePlan(String component, String target) {
+        return Mono.fromSupplier(() -> {
+            String slug = fixture.slug(component);
+            String targetSlug = fixture.slug(target);
+            var targetSpec = fixture.spec(targetSlug);
+            String targetName = targetSpec != null ? targetSpec.name() : target;
+            boolean owned = fixture.isOwned(slug);
+            String diff = String.join("\n",
+                    "# caller — github.com/acme/" + slug,
+                    "--- a/src/main/java/com/acme/" + slug + "/DownstreamClient.java",
+                    "+++ b/src/main/java/com/acme/" + slug + "/DownstreamClient.java",
+                    "@@ bound the failure: retry transient errors, cap the wait",
+                    " return webClient.post()",
+                    "     .retrieve()",
+                    "     .bodyToMono(Response.class)",
+                    "+    .retryWhen(Retry.backoff(3, Duration.ofMillis(120))",
+                    "+        .filter(TransientException.class::isInstance))",
+                    "+    .timeout(Duration.ofSeconds(2))");
+            return new EnhancementPlan(
+                    component,
+                    owned,
+                    component + " → " + targetName + " is erroring above the configured threshold. "
+                            + "Bound the failure with retry + timeout on the caller, and alert on the "
+                            + "sustained rate so regressions page the owning team.",
+                    List.of(
+                            "Add bounded retry with backoff and a hard timeout on the call to " + targetName + ".",
+                            "Alert on the sustained error rate so regressions page the owning team.",
+                            "Use the traces tab to find the failing requests and their logs."),
+                    diff,
+                    List.of("grafana: rate(" + slug + " → " + targetSlug + " errors) > threshold for 5m → page owning team"));
+        });
+    }
 }

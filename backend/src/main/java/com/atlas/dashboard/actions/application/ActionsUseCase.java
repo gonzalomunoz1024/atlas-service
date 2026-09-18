@@ -27,4 +27,9 @@ public class ActionsUseCase implements ActionsInboundPort {
     public Mono<EnhancementPlan> enhancement(String component) {
         return repoEnhancement.plan(component);
     }
+
+    @Override
+    public Mono<EnhancementPlan> errorRateEnhancement(String component, String target) {
+        return repoEnhancement.errorRatePlan(component, target);
+    }
 }

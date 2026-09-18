@@ -34,4 +34,11 @@ public class RestControllerActionsAdapter implements ActionsInboundPort {
     public Mono<EnhancementPlan> enhancement(@PathVariable String component) {
         return useCase.enhancement(component);
     }
+
+    @Override
+    @PostMapping("/enhancements/{component}/error-rate")
+    public Mono<EnhancementPlan> errorRateEnhancement(@PathVariable String component,
+            @RequestParam String target) {
+        return useCase.errorRateEnhancement(component, target);
+    }
 }

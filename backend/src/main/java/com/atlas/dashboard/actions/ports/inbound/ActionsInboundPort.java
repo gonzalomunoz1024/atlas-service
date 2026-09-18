@@ -9,4 +9,6 @@ public interface ActionsInboundPort {
     Mono<SyntheticTest> syntheticFromTrace(String traceId, String node, String endpoint);
 
     Mono<EnhancementPlan> enhancement(String component);
+
+    Mono<EnhancementPlan> errorRateEnhancement(String component, String target);
 }
