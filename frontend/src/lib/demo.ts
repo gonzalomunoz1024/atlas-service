@@ -621,12 +621,10 @@ function buildEnhancement(component: string): EnhancementPlan {
 
   // stay consistent with the map: only propose a fix when this component actually
   // has an outgoing live edge with no logs (the amber dashes in the graph)
-  const gapTargets = [...MISSING_LOG_EDGES]
+  const gapIds = [...MISSING_LOG_EDGES]
     .filter((id) => id.startsWith(`${s}->`))
-    .map((id) => {
-      const target = id.slice(id.indexOf('->') + 2)
-      return NAME_BY_ID.get(target) ?? target
-    })
+    .map((id) => id.slice(id.indexOf('->') + 2))
+  const gapTargets = gapIds.map((t) => NAME_BY_ID.get(t) ?? t)
 
   if (gapTargets.length === 0) {
     return {
@@ -640,10 +638,15 @@ function buildEnhancement(component: string): EnhancementPlan {
   }
 
   const targets = gapTargets.join(', ')
+  // Two repositories, one fix: the caller propagates the trace id and logs the round trip;
+  // the receiving service logs the same id on arrival. Both hunks are needed — caller-side
+  // logs alone can never prove the receiver saw the call.
+  const receiver = gapIds[0]
   const diff = [
+    `# caller — github.com/acme/${s}`,
     `--- a/src/main/java/com/acme/${s}/OpaPolicyClient.java`,
     `+++ b/src/main/java/com/acme/${s}/OpaPolicyClient.java`,
-    '@@ caller: propagate the trace id in the headers and log it',
+    '@@ propagate the trace id in the request headers and log the round trip',
     ' public Mono<Decision> decide(PolicyRequest req) {',
     '+    String traceparent = tracer.currentTraceparent();',
     '+    log.info("opa.decide.request traceId={} subject={}", tracer.currentTraceId(), req.subject());',
@@ -656,13 +659,17 @@ function buildEnhancement(component: string): EnhancementPlan {
     '+        .doOnNext(d -> log.info("opa.decide.response traceId={} allow={}", tracer.currentTraceId(), d.allow()));',
     ' }',
     '',
-    '--- a/receiver: log the propagated trace id on arrival',
-    '+++ b/src/main/java/.../TraceLogFilter.java',
-    '@@ receiver: read traceparent from the headers and log it',
-    '+public Mono<Void> filter(ServerWebExchange ex, WebFilterChain chain) {',
-    '+    String traceId = TraceContext.from(ex.getRequest().getHeaders().getFirst("traceparent"));',
-    '+    log.info("request.received traceId={} path={}", traceId, ex.getRequest().getPath());',
-    '+    return chain.filter(ex);',
+    `# receiver — github.com/acme/${receiver}`,
+    `--- a/src/main/java/com/acme/${receiver}/TraceLogFilter.java`,
+    `+++ b/src/main/java/com/acme/${receiver}/TraceLogFilter.java`,
+    '@@ log the propagated trace id on every arriving request',
+    '+@Component',
+    '+public class TraceLogFilter implements WebFilter {',
+    '+    public Mono<Void> filter(ServerWebExchange ex, WebFilterChain chain) {',
+    '+        String traceId = TraceContext.from(ex.getRequest().getHeaders().getFirst("traceparent"));',
+    '+        log.info("request.received traceId={} path={}", traceId, ex.getRequest().getPath());',
+    '+        return chain.filter(ex);',
+    '+    }',
     '+}',
   ].join('\n')
   return {

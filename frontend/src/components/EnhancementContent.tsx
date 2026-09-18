@@ -67,11 +67,13 @@ export function EnhancementContent({ component }: { component: string }) {
             <div
               key={i}
               className={
-                line.startsWith('+')
-                  ? 'text-healthy'
-                  : line.startsWith('-') && !line.startsWith('---')
-                    ? 'text-critical'
-                    : 'text-secondary'
+                line.startsWith('#')
+                  ? 'font-semibold text-primary'
+                  : line.startsWith('+')
+                    ? 'text-healthy'
+                    : line.startsWith('-') && !line.startsWith('---')
+                      ? 'text-critical'
+                      : 'text-secondary'
               }
             >
               {line || ' '}

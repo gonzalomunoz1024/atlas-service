@@ -25,18 +25,20 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
 
             // stay consistent with the map: only propose a fix when this component actually has
             // an outgoing live edge with no logs (the amber dashes in the graph)
-            List<String> gapTargets = fixture.edgeObservations(component).values().stream()
+            List<String> gapIds = fixture.edgeObservations(component).values().stream()
                     .filter(o -> o.observed() && !o.hasLogs())
                     .map(o -> o.edgeId())
                     .filter(id -> id.startsWith(slug + "->"))
+                    .map(id -> id.substring(id.indexOf("->") + 2))
+                    .toList();
+            List<String> gapTargets = gapIds.stream()
                     .map(id -> {
-                        String target = id.substring(id.indexOf("->") + 2);
-                        var spec = fixture.spec(target);
-                        return spec != null ? spec.name() : target;
+                        var spec = fixture.spec(id);
+                        return spec != null ? spec.name() : id;
                     })
                     .toList();
 
-            if (gapTargets.isEmpty()) {
+            if (gapIds.isEmpty()) {
                 return new EnhancementPlan(
                         component,
                         owned,
@@ -47,10 +49,15 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                         List.of());
             }
 
+            // Two repositories, one fix: the caller propagates the trace id and logs the round
+            // trip; the receiving service logs the same id on arrival. Both hunks are needed —
+            // caller-side logs alone can never prove the receiver saw the call.
+            String receiver = gapIds.get(0);
             String diff = String.join("\n",
+                    "# caller — github.com/acme/" + slug,
                     "--- a/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
                     "+++ b/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
-                    "@@ caller: propagate the trace id in the headers and log it",
+                    "@@ propagate the trace id in the request headers and log the round trip",
                     " public Mono<Decision> decide(PolicyRequest req) {",
                     "+    String traceparent = tracer.currentTraceparent();",
                     "+    log.info(\"opa.decide.request traceId={} subject={}\", tracer.currentTraceId(), req.subject());",
@@ -63,13 +70,17 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                     "+        .doOnNext(d -> log.info(\"opa.decide.response traceId={} allow={}\", tracer.currentTraceId(), d.allow()));",
                     " }",
                     "",
-                    "--- a/receiver: log the propagated trace id on arrival",
-                    "+++ b/src/main/java/.../TraceLogFilter.java",
-                    "@@ receiver: read traceparent from the headers and log it",
-                    "+public Mono<Void> filter(ServerWebExchange ex, WebFilterChain chain) {",
-                    "+    String traceId = TraceContext.from(ex.getRequest().getHeaders().getFirst(\"traceparent\"));",
-                    "+    log.info(\"request.received traceId={} path={}\", traceId, ex.getRequest().getPath());",
-                    "+    return chain.filter(ex);",
+                    "# receiver — github.com/acme/" + receiver,
+                    "--- a/src/main/java/com/acme/" + receiver + "/TraceLogFilter.java",
+                    "+++ b/src/main/java/com/acme/" + receiver + "/TraceLogFilter.java",
+                    "@@ log the propagated trace id on every arriving request",
+                    "+@Component",
+                    "+public class TraceLogFilter implements WebFilter {",
+                    "+    public Mono<Void> filter(ServerWebExchange ex, WebFilterChain chain) {",
+                    "+        String traceId = TraceContext.from(ex.getRequest().getHeaders().getFirst(\"traceparent\"));",
+                    "+        log.info(\"request.received traceId={} path={}\", traceId, ex.getRequest().getPath());",
+                    "+        return chain.filter(ex);",
+                    "+    }",
                     "+}");
             return new EnhancementPlan(
                     component,
