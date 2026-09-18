@@ -11,7 +11,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface FlowInboundPort {
-    Flux<TraceSummary> recentTraces(String component, int limit);
+    Flux<TraceSummary> recentTraces(String component, int limit, String rev);
 
     Mono<TraceDetail> trace(String traceId);
 

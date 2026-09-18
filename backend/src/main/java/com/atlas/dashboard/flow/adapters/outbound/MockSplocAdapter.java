@@ -24,8 +24,9 @@ public class MockSplocAdapter implements SplocPort {
     private final TopologyFixture fixture;
 
     @Override
-    public Flux<TraceSummary> recentTraces(String component, int limit) {
-        Random r = new Random((fixture.slug(component) + ":traces").hashCode());
+    public Flux<TraceSummary> recentTraces(String component, int limit, String rev) {
+        // traces are per-environment: each deployed revision has its own recent set
+        Random r = new Random((fixture.slug(component) + ":traces" + (rev != null ? ":" + rev : "")).hashCode());
         return Flux.range(0, limit)
                 .map(i -> {
                     String traceId = "trc-" + shortSlug(component) + "-"

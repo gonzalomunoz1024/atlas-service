@@ -34,6 +34,10 @@ export type EdgeFix =
 
 interface Props {
   component: string
+  /** revision (commit) the map is viewed at — traces are per-environment */
+  rev?: string
+  /** false when viewing an undeployed commit — no traces exist */
+  running?: boolean
   title?: string
   initialSource?: string
   /** present when opened from a red/amber edge — adds the Fix suggestion tab */
@@ -53,7 +57,7 @@ const RANGES: { id: string; label: string; ms: number }[] = [
   { id: '6h', label: 'Last 6 Hours', ms: 6 * 60 * 60_000 },
 ]
 
-export function TraceDrawer({ component, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -64,8 +68,12 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
   const [range, setRange] = useState<string>('all')
 
   useEffect(() => {
-    api.traces(component, 14).then(setTraces).catch(() => setTraces([]))
-  }, [component])
+    if (!running) {
+      setTraces([])
+      return
+    }
+    api.traces(component, 14, rev).then(setTraces).catch(() => setTraces([]))
+  }, [component, rev, running])
 
   // when opened for a specific node, pre-select that source
   useEffect(() => {
@@ -110,6 +118,14 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
     <Drawer onClose={onClose}>
       <Header title={title ?? component} />
 
+      {!running ? (
+        <EmptyState
+          icon="pulse"
+          title="No Traces for This Commit"
+          message="This commit isn’t deployed anywhere, so no traffic — and no traces — exist for it."
+        />
+      ) : (
+        <>
       {evidenceNote && (
         <p className="flex items-center gap-1.5 border-b border-stroke-light px-5 py-2 text-caption text-tertiary">
           <Icon name="check" size={12} className="shrink-0 text-healthy" />
@@ -234,6 +250,8 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
           </ul>
         )}
       </div>
+        </>
+      )}
         </>
       )}
     </Drawer>

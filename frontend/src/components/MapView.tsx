@@ -353,21 +353,26 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       icon: 'ring',
       run: () => graphRef.current?.focusNode(n.id),
     }))
+    const isRunning = repoView?.running ?? true
     const actions: PaletteCommand[] = [
-      {
-        id: 'act-traces',
-        group: 'Actions',
-        label: 'Open Traces',
-        icon: 'pulse',
-        run: () => setTraceCtx({ title: `${component} · all traces` }),
-      },
-      {
-        id: 'act-coverage',
-        group: 'Actions',
-        label: 'Logging Coverage',
-        icon: 'ring',
-        run: () => setShowTable(true),
-      },
+      ...(isRunning
+        ? [
+            {
+              id: 'act-traces',
+              group: 'Actions' as const,
+              label: 'Open Traces',
+              icon: 'pulse' as const,
+              run: () => setTraceCtx({ title: `${component} · all traces` }),
+            },
+            {
+              id: 'act-coverage',
+              group: 'Actions' as const,
+              label: 'Logging Coverage',
+              icon: 'ring' as const,
+              run: () => setShowTable(true),
+            },
+          ]
+        : []),
       {
         id: 'act-wiki',
         group: 'Actions',
@@ -402,7 +407,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
     ]
     return [...actions, ...nodeCmds]
-  }, [map, component])
+  }, [map, component, repoView])
 
   const openWiki = () => {
     const center = map?.nodes.find((n) => n.center)
@@ -558,7 +563,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           <ObservabilityMenu
             coverage={running ? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
-            onTraces={() => setTraceCtx({ title: `${component} · all traces` })}
+            onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
             onWiki={openWiki}
           />
           <EdgeHealthSettings settings={healthSettings} onChange={setHealthSettings} />
@@ -598,6 +603,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         {traceCtx && (
           <TraceDrawer
             component={component}
+            rev={revCommit}
+            running={running}
             title={traceCtx.title}
             initialSource={traceCtx.source}
             restrictSources={traceCtx.restrictSources}

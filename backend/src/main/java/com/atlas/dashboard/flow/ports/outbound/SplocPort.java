@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 
 /** SPLOC: trace/span topology (without logs). */
 public interface SplocPort {
-    Flux<TraceSummary> recentTraces(String component, int limit);
+    Flux<TraceSummary> recentTraces(String component, int limit, String rev);
 
     /** Span skeleton for a trace, with empty log lists (logs come from Splunk). */
     Mono<TraceDetail> spans(String traceId);

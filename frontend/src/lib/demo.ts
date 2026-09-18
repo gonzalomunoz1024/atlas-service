@@ -244,8 +244,9 @@ function buildTrace(traceId: string): TraceDetail {
   }
 }
 
-function buildTraceSummaries(component: string, limit: number): TraceSummary[] {
-  const rand = seeded(resolveCenter(component) + ':traces')
+function buildTraceSummaries(component: string, limit: number, rev?: string): TraceSummary[] {
+  // traces are per-environment: each deployed revision has its own recent set
+  const rand = seeded(resolveCenter(component) + ':traces' + (rev ?? ''))
   return Array.from({ length: limit }, (_, i) => {
     const traceId = `trc-gr-${(1000 + Math.round(rand() * 8999)).toString(16)}${i}`
     const detail = buildTrace(traceId)
@@ -756,7 +757,7 @@ export const demo = {
   nodeWiki: (nodeId: string) => wait(buildWiki(nodeId)),
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),
   nodeOpenApi: (nodeId: string): Promise<ApiOperation[]> => wait(buildOpenApi(nodeId)),
-  traces: (component: string, limit: number) => wait(buildTraceSummaries(component, limit)),
+  traces: (component: string, limit: number, rev?: string) => wait(buildTraceSummaries(component, limit, rev)),
   trace: (traceId: string) => wait(buildTrace(traceId)),
   flows: (_component: string, _rev?: string) => wait(buildFlows()),
   revisions: (component: string): Promise<RepoRevisions> => {

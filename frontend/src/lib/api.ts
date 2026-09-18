@@ -61,10 +61,13 @@ export const api = {
       ? demo.nodeEndpoints(nodeId)
       : get(`/v1/components/${encodeURIComponent(name)}/nodes/${encodeURIComponent(nodeId)}/endpoints`),
 
-  traces: (component: string, limit = 12): Promise<TraceSummary[]> =>
+  traces: (component: string, limit = 12, rev?: string): Promise<TraceSummary[]> =>
     DEMO_MODE
-      ? demo.traces(component, limit)
-      : get(`/v1/traces?component=${encodeURIComponent(component)}&limit=${limit}`),
+      ? demo.traces(component, limit, rev)
+      : get(
+          `/v1/traces?component=${encodeURIComponent(component)}&limit=${limit}` +
+            (rev ? `&rev=${encodeURIComponent(rev)}` : ''),
+        ),
 
   trace: (traceId: string): Promise<TraceDetail> =>
     DEMO_MODE ? demo.trace(traceId) : get(`/v1/traces/${encodeURIComponent(traceId)}`),
