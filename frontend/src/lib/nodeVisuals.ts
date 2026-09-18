@@ -5,7 +5,7 @@ export const NODE_COLOR_VAR: Record<NodeKind, string> = {
   service: '--node-service',
   kafka: '--node-kafka',
   database: '--node-database',
-  mongo: '--node-mongo',
+  store: '--node-store',
   cache: '--node-cache',
   external: '--node-external',
 }
@@ -14,7 +14,7 @@ export const NODE_LABEL: Record<NodeKind, string> = {
   service: 'Service',
   kafka: 'Kafka topic',
   database: 'Database',
-  mongo: 'MongoDB',
+  store: 'Data Store',
   cache: 'Cache',
   external: 'External',
 }

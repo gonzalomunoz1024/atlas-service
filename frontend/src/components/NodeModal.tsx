@@ -75,10 +75,15 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
         {tab === 'overview' && (
           <div className="space-y-5">
             {running ? (
-              <div className="grid grid-cols-3 gap-3">
-                <Stat label="Connections" value={String(related.length)} />
-                <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
-                <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
+              <div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Stat label="Connections" value={String(related.length)} />
+                  <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
+                  <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
+                </div>
+                <p className="mt-1.5 text-caption2 text-tertiary">
+                  Connections from DeepWiki · Calls / Min &amp; Max p95 from SPLOC caller-side spans
+                </p>
               </div>
             ) : (
               <div className="rounded-md bg-surface-secondary p-3 text-sm text-secondary">
@@ -90,14 +95,14 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
             {missingLog && (
               <div className="rounded-md border border-warning/40 bg-warning-tint p-3 text-sm">
                 <p className="font-medium text-warning">Logging Gap Detected</p>
-                <p className="mt-1 text-secondary">A live call path touching this node has no logs in Splunk.</p>
-                {node.owned && (
-                  <div className="mt-2.5 flex justify-end">
-                    <Button size="sm" variant="warning-outline" onClick={onEnhance}>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="text-secondary">A live call path touching this node has no logs in Splunk.</p>
+                  {node.owned && (
+                    <Button size="sm" variant="warning-outline" onClick={onEnhance} className="shrink-0">
                       Fix
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
@@ -254,7 +259,7 @@ function Header({ node, running }: { node: ComponentNode; running: boolean }) {
                 title={node.owned ? 'Your application' : 'A different application'}
               >
                 {node.app}
-                {node.owned ? '' : ' · external'}
+                {node.owned || node.kind === 'external' ? '' : ' · external'}
               </span>
             </>
           )}

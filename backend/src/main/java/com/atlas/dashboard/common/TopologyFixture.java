@@ -57,7 +57,7 @@ public class TopologyFixture {
             new NodeSpec("opa-sandbox", "Sandbox OPA", NodeKind.SERVICE, "TAP", null),
             new NodeSpec("vmforge", "VMForge", NodeKind.SERVICE, "CLAUT", null),
             new NodeSpec("lightspeed", "Lightspeed Platform Service", NodeKind.SERVICE, "BPE", null),
-            new NodeSpec("bpe-mongo", "BPE Mongo DB", NodeKind.MONGO, "BPE", null),
+            new NodeSpec("bpe-mongo", "BPE Mongo DB", NodeKind.STORE, "BPE", null),
             new NodeSpec("evt-request", "GuardrailsEvaluationRequestedEvent", NodeKind.KAFKA, "BPE", KAFKA_CLUSTER),
             new NodeSpec("evt-response", "GuardrailsEvaluationResponseEvent", NodeKind.KAFKA, "BPE", KAFKA_CLUSTER));
 
@@ -84,7 +84,7 @@ public class TopologyFixture {
     // --- per-revision topology: dev introduced an S3 dependency not yet in test/prod ---
     private static final String S3_COMMIT = "a1b2c3d"; // the dev environment's commit
     private static final NodeSpec S3_NODE =
-            new NodeSpec("s3-bucket", "S3", NodeKind.EXTERNAL, "AWS", null);
+            new NodeSpec("s3-bucket", "S3", NodeKind.STORE, "AWS", null);
     private static final DependencyEdge S3_EDGE =
             DependencyEdge.of("guardrails-orchestrator", "s3-bucket", EdgeKind.HTTP);
 
@@ -134,10 +134,13 @@ public class TopologyFixture {
         List<ComponentNode> out = new ArrayList<>();
         for (NodeSpec s : nodeSpecsFor(rev)) {
             boolean owned = OUR_APP.equals(s.app());
+            // consistency rule: a service another org owns IS an external service — the legend,
+            // the node colour, and the modal must all say so, not just the modal
+            NodeKind kind = s.kind() == NodeKind.SERVICE && !owned ? NodeKind.EXTERNAL : s.kind();
             if (s.id().equals(c)) {
-                out.add(new ComponentNode(s.id(), s.name(), s.kind(), s.app(), s.cluster(), owned, Health.HEALTHY, true));
+                out.add(new ComponentNode(s.id(), s.name(), kind, s.app(), s.cluster(), owned, Health.HEALTHY, true));
             } else {
-                out.add(ComponentNode.of(s.id(), s.name(), s.kind(), s.app(), s.cluster(), owned,
+                out.add(ComponentNode.of(s.id(), s.name(), kind, s.app(), s.cluster(), owned,
                         health(rng(s.id() + ":health"))));
             }
         }

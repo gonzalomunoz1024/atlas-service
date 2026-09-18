@@ -64,7 +64,7 @@ const NODES: NodeSpec[] = [
   { id: 'opa-sandbox', name: 'Sandbox OPA', kind: 'service', app: 'TAP' },
   { id: 'vmforge', name: 'VMForge', kind: 'service', app: 'CLAUT' },
   { id: 'lightspeed', name: 'Lightspeed Platform Service', kind: 'service', app: 'BPE' },
-  { id: 'bpe-mongo', name: 'BPE Mongo DB', kind: 'mongo', app: 'BPE' },
+  { id: 'bpe-mongo', name: 'BPE Mongo DB', kind: 'store', app: 'BPE' },
   { id: 'evt-request', name: 'GuardrailsEvaluationRequestedEvent', kind: 'kafka', app: 'BPE', cluster: KAFKA_CLUSTER },
   { id: 'evt-response', name: 'GuardrailsEvaluationResponseEvent', kind: 'kafka', app: 'BPE', cluster: KAFKA_CLUSTER },
 ]
@@ -97,7 +97,7 @@ const SILENT_EDGES = new Set(['guardrails-studio->guardrails-registry'])
 
 // per-revision topology: dev introduced an S3 dependency not yet in test/prod (mirrors backend)
 const S3_COMMIT = 'a1b2c3d'
-const S3_NODE: NodeSpec = { id: 's3-bucket', name: 'S3', kind: 'external', app: 'AWS' }
+const S3_NODE: NodeSpec = { id: 's3-bucket', name: 'S3', kind: 'store', app: 'AWS' }
 const S3_EDGE: DependencyEdge = {
   id: 'guardrails-orchestrator->s3-bucket',
   source: 'guardrails-orchestrator',
@@ -126,7 +126,8 @@ function toNode(spec: NodeSpec, center: string): ComponentNode {
   return {
     id: spec.id,
     name: spec.name,
-    kind: spec.kind,
+    // consistency rule: a service another org owns IS an external service
+    kind: spec.kind === 'service' && spec.app !== OUR_APP ? 'external' : spec.kind,
     app: spec.app,
     cluster: spec.cluster,
     owned: spec.app === OUR_APP,
@@ -791,7 +792,7 @@ export const demo = {
       SEARCHABLE.filter((n) => n.name.toLowerCase().includes(q.toLowerCase())).map((n) => ({
         id: n.id,
         name: n.name,
-        kind: n.kind,
+        kind: n.kind === 'service' && n.app !== OUR_APP ? ('external' as const) : n.kind,
         app: n.app,
         owned: n.app === OUR_APP,
       })),
