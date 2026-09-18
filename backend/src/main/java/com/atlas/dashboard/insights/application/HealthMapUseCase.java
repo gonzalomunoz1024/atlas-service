@@ -3,6 +3,7 @@ package com.atlas.dashboard.insights.application;
 import org.springframework.stereotype.Service;
 
 import com.atlas.dashboard.common.domain.NodeKindRule;
+import com.atlas.dashboard.insights.domain.DepthScope;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.HealthMap;
 import com.atlas.dashboard.insights.domain.MissingLinkDetector;
@@ -25,7 +26,7 @@ public class HealthMapUseCase implements InsightsInboundPort {
     private final ObservabilityPort observability;
 
     @Override
-    public Mono<HealthMap> healthMap(String component, String rev) {
+    public Mono<HealthMap> healthMap(String component, String rev, Integer maxDepth) {
         return Mono.zip(
                 deepWiki.graph(component, rev),
                 observability.edgeObservations(component, rev))
@@ -33,11 +34,12 @@ public class HealthMapUseCase implements InsightsInboundPort {
                     var graph = t.getT1();
                     var obs = t.getT2();
                     java.util.List<HealthEdge> edges = MissingLinkDetector.annotateAll(graph.edges(), obs);
-                    return new HealthMap(
+                    HealthMap map = new HealthMap(
                             graph.center(),
                             graph.nodes().stream().map(NodeKindRule::apply).toList(),
                             edges,
                             MissingLinkDetector.coverage(edges));
+                    return maxDepth != null ? DepthScope.apply(map, maxDepth) : map;
                 });
     }
 }

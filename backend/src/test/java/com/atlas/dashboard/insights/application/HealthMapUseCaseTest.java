@@ -57,7 +57,7 @@ class HealthMapUseCaseTest {
         when(deepWiki.graph("svc", null)).thenReturn(Mono.just(graph));
         when(observability.edgeObservations("svc", null)).thenReturn(Mono.just(obs));
 
-        StepVerifier.create(useCase.healthMap("svc", null))
+        StepVerifier.create(useCase.healthMap("svc", null, null))
                 .assertNext(map -> {
                     assertThat(map.center()).isEqualTo("svc");
                     assertThat(status(map.edges(), "svc->logged-dep")).isEqualTo(LinkStatus.HEALTHY);

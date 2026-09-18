@@ -107,17 +107,27 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     }
   }, [component])
 
-  // revision change (or first load): (re)load the map + flow membership for that commit
+  // depth changes are debounced so slider drags don't fire a request per pixel
+  const [depthQuery, setDepthQuery] = useState(maxDepth)
+  useEffect(() => {
+    const t = setTimeout(() => setDepthQuery(maxDepth), 250)
+    return () => clearTimeout(t)
+  }, [maxDepth])
+
+  // revision change (or first load): reset live-health state, load flow membership + the full
+  // topology's node kinds (the legend's frozen chip set while the gear popover is open)
+  const [fullKinds, setFullKinds] = useState<Set<NodeKind> | null>(null)
   useEffect(() => {
     let cancelled = false
     setMap(null)
     setError(null)
     errWindow.current.clear()
     setEdgeHealth(new Map())
+    setFullKinds(null)
     api
-      .healthMap(component, revCommit)
-      .then((m) => !cancelled && setMap(m))
-      .catch((e) => !cancelled && setError(String(e)))
+      .graph(component, revCommit)
+      .then((g) => !cancelled && setFullKinds(new Set(g.nodes.map((n) => n.kind))))
+      .catch(() => {})
     // flow membership per origin — the rule lives server-side, we just consume it to dim the map
     api
       .flows(component, revCommit)
@@ -136,65 +146,32 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     }
   }, [component, revCommit])
 
-  // the map only reaches maxDepth hops (undirected BFS) from the source repository — callers
-  // and callees both count as one hop, and an edge shows only when both ends are in reach.
-  // Everything downstream (coverage, hazards, traces, blast radius…) consumes this view, so the
-  // whole UI stays in sync with the depth setting.
-  const visible = useMemo(() => {
-    if (!map) return null
-    const center = map.nodes.find((n) => n.center)
-    if (!center) return { nodes: map.nodes, edges: map.edges, coverage: map.coverage }
-    const adj = new Map<string, string[]>()
-    for (const e of map.edges) {
-      adj.set(e.source, [...(adj.get(e.source) ?? []), e.target])
-      adj.set(e.target, [...(adj.get(e.target) ?? []), e.source])
+  // the map itself is depth-scoped SERVER-side (BFS + coverage re-scoring in one place, the
+  // backend) — on a depth change the old map stays up until the scoped one arrives
+  useEffect(() => {
+    let cancelled = false
+    api
+      .healthMap(component, revCommit, depthQuery)
+      .then((m) => !cancelled && setMap(m))
+      .catch((e) => !cancelled && setError(String(e)))
+    return () => {
+      cancelled = true
     }
-    const depth = new Map<string, number>([[center.id, 0]])
-    let frontier = [center.id]
-    while (frontier.length > 0) {
-      const next: string[] = []
-      for (const id of frontier) {
-        for (const nb of adj.get(id) ?? []) {
-          if (!depth.has(nb)) {
-            depth.set(nb, depth.get(id)! + 1)
-            next.push(nb)
-          }
-        }
-      }
-      frontier = next
-    }
-    const keep = new Set(
-      map.nodes.filter((n) => (depth.get(n.id) ?? Infinity) <= maxDepth).map((n) => n.id),
-    )
-    const edges = map.edges.filter((e) => keep.has(e.source) && keep.has(e.target))
-    // coverage rescored over the links in view (same rule the backend uses)
-    const observed = edges.filter((e) => e.observed)
-    const logged = observed.filter((e) => e.linkStatus === 'healthy')
-    return {
-      nodes: map.nodes.filter((n) => keep.has(n.id)),
-      edges,
-      coverage: {
-        loggedEdges: logged.length,
-        observedEdges: observed.length,
-        totalEdges: edges.length,
-        score: observed.length > 0 ? Math.round((100 * logged.length) / observed.length) : 100,
-      },
-    }
-  }, [map, maxDepth])
+  }, [component, revCommit, depthQuery])
 
   // insight moment: when the map in view has logging gaps, draw the eye — once, softly
   useEffect(() => {
-    if (!visible || !(repoView?.running ?? true)) return
+    if (!map || !(repoView?.running ?? true)) return
     const key = `${component}@${revCommit ?? ''}`
     if (insightShown.current === key) return
-    if (visible.edges.some((e) => e.linkStatus === 'missing_logs')) {
+    if (map.edges.some((e) => e.linkStatus === 'missing_logs')) {
       insightShown.current = key
       setShimmerUntil(performance.now() + 2600)
       setInsightPulse(true)
       const t = setTimeout(() => setInsightPulse(false), 2600)
       return () => clearTimeout(t)
     }
-  }, [visible, component, revCommit, repoView])
+  }, [map, component, revCommit, repoView])
 
   // the endpoint selected in the inspect panel resolves to its downstream sub-flow (from DeepWiki)
   const endpointFlow = useMemo(
@@ -361,14 +338,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   const showBlast = useCallback(
     (node: ComponentNode) => {
-      if (!visible) return
+      if (!map) return
       // over the links in view, so the count always matches what the map shows
-      const affected = blastRadius(node.id, visible.edges)
+      const affected = blastRadius(node.id, map.edges)
       setFlowSource(null)
       setHighlight(affected)
       setBlast({ node: node.name, count: affected.size - 1 })
     },
-    [visible],
+    [map],
   )
 
   const clearHighlight = useCallback(() => {
@@ -405,7 +382,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     if (!map) return []
     const center = map.nodes.find((n) => n.center)
     // only nodes within the configured depth are on the map, so only those are jumpable
-    const nodeCmds: PaletteCommand[] = (visible?.nodes ?? map.nodes).map((n) => ({
+    const nodeCmds: PaletteCommand[] = map.nodes.map((n) => ({
       id: `node-${n.id}`,
       group: 'Nodes',
       label: n.name,
@@ -442,7 +419,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
       // only offered when the map actually shows a logging gap leaving the root service,
       // so the enhancement popup can never contradict the graph
-      ...(center && (visible?.edges ?? map.edges).some((e) => e.linkStatus === 'missing_logs' && e.source === center.id)
+      ...(center && map.edges.some((e) => e.linkStatus === 'missing_logs' && e.source === center.id)
         ? [
             {
               id: 'act-enhance',
@@ -462,7 +439,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
     ]
     return [...actions, ...nodeCmds]
-  }, [map, visible, component, repoView])
+  }, [map, component, repoView])
 
   const header = (
     <AppHeader
@@ -543,8 +520,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         <ErrorBoundary label="The graph">
           <GraphCanvas
             ref={graphRef}
-            nodes={visible?.nodes ?? map.nodes}
-            edges={visible?.edges ?? map.edges}
+            nodes={map.nodes}
+            edges={map.edges}
             selectedId={selected?.id ?? inspectId ?? undefined}
             highlightIds={effectiveHighlight ?? undefined}
             dimUnhighlighted={effectiveDim}
@@ -609,11 +586,11 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             hiddenKinds={hiddenKinds}
             onToggle={toggleKind}
             present={
-              new Set((settingsOpen ? map.nodes : visible?.nodes ?? map.nodes).map((n) => n.kind))
+              settingsOpen ? fullKinds ?? new Set(map.nodes.map((n) => n.kind)) : new Set(map.nodes.map((n) => n.kind))
             }
           />
           <ObservabilityMenu
-            coverage={running ? visible?.coverage ?? map.coverage : undefined}
+            coverage={running ? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
             onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
             onOverview={() => openRootModal('overview')}
@@ -630,7 +607,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         {/* missing links — the actual job, top-right (hidden for undeployed commits: no data) */}
         {running && (
           <div className="absolute right-4 top-4">
-            <MissingLinksPanel edges={visible?.edges ?? map.edges} onFocus={focusEdge} pulse={insightPulse} />
+            <MissingLinksPanel edges={map.edges} onFocus={focusEdge} pulse={insightPulse} />
           </div>
         )}
 
@@ -639,7 +616,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             key={selected.id}
             component={component}
             node={selected}
-            edges={visible?.edges ?? map.edges}
+            edges={map.edges}
             running={running}
             initialTab={modalTab}
             onClose={() => setSelected(null)}
@@ -666,7 +643,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             title={traceCtx.title}
             initialSource={traceCtx.source}
             restrictSources={traceCtx.restrictSources}
-            visibleSources={visible?.nodes.map((n) => n.name)}
+            visibleSources={map.nodes.map((n) => n.name)}
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
@@ -676,7 +653,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
         {showTable && (
           <CoverageTable
-            map={visible ? { ...map, ...visible } : map}
+            map={map}
             onClose={() => setShowTable(false)}
           />
         )}

@@ -141,7 +141,7 @@ function buildGraph(centerName: string, rev?: string): ComponentGraph {
   return { center, nodes: nodesFor(rev).map((n) => toNode(n, center)), edges: edgesFor(rev) }
 }
 
-function buildHealthMap(centerName: string, rev?: string): HealthMap {
+function buildHealthMap(centerName: string, rev?: string, maxDepth?: number): HealthMap {
   const center = resolveCenter(centerName)
   const hEdges: HealthEdge[] = edgesFor(rev).map((edge) => {
     // metrics are per-environment: each deployed revision sees its own traffic numbers
@@ -162,14 +162,39 @@ function buildHealthMap(centerName: string, rev?: string): HealthMap {
       p95LatencyMs: observed ? Math.round(12 + rand() * 240) : 0,
     }
   })
-  const observedEdges = hEdges.filter((e) => e.observed).length
-  const loggedEdges = hEdges.filter((e) => e.hasLogs).length
+  let nodes = nodesFor(rev).map((n) => toNode(n, center))
+  let edges = hEdges
+  // mirrors backend DepthScope: undirected BFS from the center, coverage re-scored over survivors
+  if (maxDepth != null) {
+    const adj = new Map<string, string[]>()
+    for (const e of edges) {
+      adj.set(e.source, [...(adj.get(e.source) ?? []), e.target])
+      adj.set(e.target, [...(adj.get(e.target) ?? []), e.source])
+    }
+    const depth = new Map<string, number>([[center, 0]])
+    let frontier = [center]
+    while (frontier.length > 0) {
+      const next: string[] = []
+      for (const id of frontier)
+        for (const nb of adj.get(id) ?? [])
+          if (!depth.has(nb)) {
+            depth.set(nb, depth.get(id)! + 1)
+            next.push(nb)
+          }
+      frontier = next
+    }
+    const keep = new Set(nodes.filter((n) => (depth.get(n.id) ?? Infinity) <= maxDepth).map((n) => n.id))
+    nodes = nodes.filter((n) => keep.has(n.id))
+    edges = edges.filter((e) => keep.has(e.source) && keep.has(e.target))
+  }
+  const observedEdges = edges.filter((e) => e.observed).length
+  const loggedEdges = edges.filter((e) => e.hasLogs).length
   const score = observedEdges === 0 ? 0 : Math.round((loggedEdges / observedEdges) * 100)
   return {
     center,
-    nodes: nodesFor(rev).map((n) => toNode(n, center)),
-    edges: hEdges,
-    coverage: { loggedEdges, observedEdges, totalEdges: hEdges.length, score },
+    nodes,
+    edges,
+    coverage: { loggedEdges, observedEdges, totalEdges: edges.length, score },
   }
 }
 
@@ -830,7 +855,7 @@ export const demo = {
       })),
     ),
   graph: (name: string, rev?: string) => wait(buildGraph(name, rev)),
-  healthMap: (name: string, rev?: string) => wait(buildHealthMap(name, rev)),
+  healthMap: (name: string, rev?: string, maxDepth?: number) => wait(buildHealthMap(name, rev, maxDepth)),
   nodeMetrics: (nodeId: string) => wait(buildMetrics(nodeId)),
   nodeWiki: (nodeId: string) => wait(buildWiki(nodeId)),
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),

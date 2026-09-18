@@ -41,10 +41,15 @@ export const api = {
   graph: (name: string, rev?: string): Promise<ComponentGraph> =>
     DEMO_MODE ? demo.graph(name, rev) : get(`/v1/components/${encodeURIComponent(name)}/graph${revQuery(rev)}`),
 
-  healthMap: (name: string, rev?: string): Promise<HealthMap> =>
-    DEMO_MODE
-      ? demo.healthMap(name, rev)
-      : get(`/v1/components/${encodeURIComponent(name)}/health-map${revQuery(rev)}`),
+  /** maxDepth limits the map to N hops from the center — scoped & re-scored server-side. */
+  healthMap: (name: string, rev?: string, maxDepth?: number): Promise<HealthMap> => {
+    if (DEMO_MODE) return demo.healthMap(name, rev, maxDepth)
+    const params = new URLSearchParams()
+    if (rev) params.set('rev', rev)
+    if (maxDepth != null) params.set('maxDepth', String(maxDepth))
+    const q = params.toString()
+    return get(`/v1/components/${encodeURIComponent(name)}/health-map${q ? `?${q}` : ''}`)
+  },
 
   nodeMetrics: (name: string, nodeId: string): Promise<NodeMetrics> =>
     DEMO_MODE

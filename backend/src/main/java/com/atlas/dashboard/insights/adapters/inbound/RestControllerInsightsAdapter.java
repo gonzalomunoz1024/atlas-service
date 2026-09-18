@@ -23,7 +23,8 @@ public class RestControllerInsightsAdapter implements InsightsInboundPort {
     @Override
     @GetMapping("/components/{component}/health-map")
     public Mono<HealthMap> healthMap(@PathVariable String component,
-            @RequestParam(required = false) String rev) {
-        return useCase.healthMap(component, rev);
+            @RequestParam(required = false) String rev,
+            @RequestParam(required = false) Integer maxDepth) {
+        return useCase.healthMap(component, rev, maxDepth);
     }
 }
