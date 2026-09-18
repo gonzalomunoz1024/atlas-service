@@ -4,7 +4,9 @@ import { EDGE_KIND_LABEL, EVIDENCE_LABEL, LINK_LABEL } from '../lib/nodeVisuals'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
 import { Button, IconButton } from './ui/Button'
+import { Select } from './ui/Select'
 import { StatusDot, type DotKind } from './ui/StatusDot'
+import { EmptyState } from './ui/EmptyState'
 
 type SortKey = 'source' | 'target' | 'kind' | 'linkStatus' | 'callsPerMin' | 'errorRate' | 'p95LatencyMs'
 
@@ -16,12 +18,22 @@ const STATUS_DOT: Record<HealthEdge['linkStatus'], DotKind> = {
 
 export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () => void }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'linkStatus', dir: 1 })
+  const [sourceFilter, setSourceFilter] = useState('all')
 
   const nameById = useMemo(() => new Map(map.nodes.map((n) => [n.id, n.name])), [map.nodes])
 
+  // every service that originates at least one link, for the title-row filter
+  const sources = useMemo(
+    () =>
+      Array.from(new Set(map.edges.map((e) => e.source))).sort((a, b) =>
+        (nameById.get(a) ?? a).localeCompare(nameById.get(b) ?? b),
+      ),
+    [map.edges, nameById],
+  )
+
   const rows = useMemo(() => {
     const order: Record<HealthEdge['linkStatus'], number> = { missing_logs: 0, silent: 1, healthy: 2 }
-    return [...map.edges].sort((a, b) => {
+    return map.edges.filter((e) => sourceFilter === 'all' || e.source === sourceFilter).sort((a, b) => {
       let av: string | number = a[sort.key]
       let bv: string | number = b[sort.key]
       if (sort.key === 'linkStatus') {
@@ -32,7 +44,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
       if (av > bv) return 1 * sort.dir
       return 0
     })
-  }, [map.edges, sort])
+  }, [map.edges, sort, sourceFilter])
 
   const toggle = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: (s.dir * -1) as 1 | -1 } : { key, dir: 1 }))
@@ -41,9 +53,30 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
 
   return (
     <Modal onClose={onClose} width="max-w-5xl">
-      <TableHeader coverage={coverage} />
+      <TableHeader
+        coverage={coverage}
+        filter={
+          <Select
+            className="w-52"
+            value={sourceFilter}
+            onChange={setSourceFilter}
+            ariaLabel="Filter by source service"
+            options={[
+              { value: 'all', label: 'All Sources' },
+              ...sources.map((s) => ({ value: s, label: nameById.get(s) ?? s })),
+            ]}
+          />
+        }
+      />
 
       <div className="min-h-0 flex-1 overflow-auto">
+        {rows.length === 0 ? (
+          <EmptyState
+            icon="ring"
+            title="No Links From This Source"
+            message="This service originates no mapped links — clear the source filter to see all links."
+          />
+        ) : (
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 bg-surface-secondary text-left text-caption text-secondary">
             <tr>
@@ -85,6 +118,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       <div className="flex items-center justify-between border-t border-stroke-light px-5 py-3 text-caption text-tertiary">
@@ -97,10 +131,10 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
   )
 }
 
-function TableHeader({ coverage }: { coverage: HealthMap['coverage'] }) {
+function TableHeader({ coverage, filter }: { coverage: HealthMap['coverage']; filter: React.ReactNode }) {
   const close = useOverlayClose()
   return (
-    <div className="flex items-start justify-between border-b border-stroke-light p-5">
+    <div className="flex items-start justify-between gap-4 border-b border-stroke-light p-5">
       <div>
         <h2 className="text-title3 font-semibold text-primary">Logging Coverage</h2>
         <p className="mt-1 text-sm text-secondary">
@@ -111,9 +145,12 @@ function TableHeader({ coverage }: { coverage: HealthMap['coverage'] }) {
           )}
         </p>
       </div>
-      <IconButton label="Close" onClick={close}>
-        <Icon name="close" size={18} />
-      </IconButton>
+      <div className="flex shrink-0 items-center gap-2">
+        {filter}
+        <IconButton label="Close" onClick={close}>
+          <Icon name="close" size={18} />
+        </IconButton>
+      </div>
     </div>
   )
 }
