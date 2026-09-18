@@ -91,6 +91,13 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               <div className="rounded-md border border-warning/40 bg-warning-tint p-3 text-sm">
                 <p className="font-medium text-warning">Logging Gap Detected</p>
                 <p className="mt-1 text-secondary">A live call path touching this node has no logs in Splunk.</p>
+                {node.owned && (
+                  <div className="mt-2.5 flex justify-end">
+                    <Button size="sm" variant="warning-outline" onClick={onEnhance}>
+                      Fix
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -126,11 +133,6 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
                 </Button>
               )}
               <Button onClick={onBlast}>Blast Radius</Button>
-              {node.owned && missingLog && (
-                <Button variant="warning-outline" onClick={onEnhance}>
-                  Observability Fix
-                </Button>
-              )}
             </div>
           </div>
         )}
