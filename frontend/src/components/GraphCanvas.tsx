@@ -546,8 +546,8 @@ export const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
             ctx.globalAlpha = alpha
           }
 
-          // reserved for genuine alarm — crisp, unanimated
-          if (n.health === 'critical') {
+          // reserved for genuine alarm — crisp, unanimated (not for undeployed commits)
+          if (n.health === 'critical' && !staticTopology) {
             ctx.lineWidth = 1.75
             ctx.strokeStyle = pal.critical
             ctx.beginPath()

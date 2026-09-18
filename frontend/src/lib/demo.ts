@@ -143,7 +143,8 @@ function buildGraph(centerName: string, rev?: string): ComponentGraph {
 function buildHealthMap(centerName: string, rev?: string): HealthMap {
   const center = resolveCenter(centerName)
   const hEdges: HealthEdge[] = edgesFor(rev).map((edge) => {
-    const rand = seeded(edge.id + ':obs')
+    // metrics are per-environment: each deployed revision sees its own traffic numbers
+    const rand = seeded(edge.id + ':obs' + (rev ?? ''))
     const silent = SILENT_EDGES.has(edge.id)
     const missing = MISSING_LOG_EDGES.has(edge.id)
     const observed = !silent

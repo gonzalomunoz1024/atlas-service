@@ -354,7 +354,8 @@ public class TopologyFixture {
     public Map<String, EdgeObservation> edgeObservations(String center, String rev) {
         Map<String, EdgeObservation> out = new LinkedHashMap<>();
         for (DependencyEdge e : edgesFor(rev)) {
-            Random r = rng(e.id() + ":obs");
+            // metrics are per-environment: each deployed revision sees its own traffic numbers
+            Random r = rng(e.id() + ":obs" + (rev != null ? ":" + rev : ""));
             boolean isSilent = SILENT_EDGES.contains(e.id());
             boolean isMissing = MISSING_LOG_EDGES.contains(e.id());
             boolean observed = !isSilent;

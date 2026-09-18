@@ -577,6 +577,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             component={component}
             node={selected}
             edges={map.edges}
+            running={running}
             initialTab={modalTab}
             onClose={() => setSelected(null)}
             onViewTraces={() => {

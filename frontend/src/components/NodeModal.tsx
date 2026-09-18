@@ -17,6 +17,8 @@ interface Props {
   component: string
   node: ComponentNode
   edges: HealthEdge[]
+  /** false when viewing an undeployed commit — no observability data exists */
+  running?: boolean
   initialTab?: Tab
   onClose: () => void
   onViewTraces: () => void
@@ -24,7 +26,7 @@ interface Props {
   onBlast: () => void
 }
 
-export function NodeModal({ component, node, edges, initialTab = 'overview', onClose, onViewTraces, onEnhance, onBlast }: Props) {
+export function NodeModal({ component, node, edges, running = true, initialTab = 'overview', onClose, onViewTraces, onEnhance, onBlast }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [wiki, setWiki] = useState<WikiDoc | null>(null)
   const [wikiError, setWikiError] = useState(false)
@@ -37,7 +39,7 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
   }, [component, node.id])
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id)
-  const missingLog = related.some((e) => e.linkStatus === 'missing_logs')
+  const missingLog = running && related.some((e) => e.linkStatus === 'missing_logs')
 
   useEffect(() => {
     if (tab === 'wiki' && !wiki) {
@@ -50,7 +52,7 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
 
   return (
     <Modal onClose={onClose} width="max-w-4xl">
-      <Header node={node} />
+      <Header node={node} running={running} />
 
       {/* tabs */}
       <div className="flex gap-1 px-5 pt-3">
@@ -72,11 +74,18 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {tab === 'overview' && (
           <div className="space-y-5">
-            <div className="grid grid-cols-3 gap-3">
-              <Stat label="Connections" value={String(related.length)} />
-              <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
-              <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
-            </div>
+            {running ? (
+              <div className="grid grid-cols-3 gap-3">
+                <Stat label="Connections" value={String(related.length)} />
+                <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
+                <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
+              </div>
+            ) : (
+              <div className="rounded-md bg-surface-secondary p-3 text-sm text-secondary">
+                This commit isn’t deployed — no live metrics, traces, or logging data exist for it.
+                Showing repository knowledge only.
+              </div>
+            )}
 
             {missingLog && (
               <div className="rounded-md border border-warning/40 bg-warning-tint p-3 text-sm">
@@ -90,28 +99,32 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
               <ul className="space-y-1.5">
                 {related.map((e) => (
                   <li key={e.id} className="flex items-center gap-2 text-sm">
-                    <StatusDot varName={LINK_COLOR_VAR[e.linkStatus]} />
+                    <StatusDot varName={running ? LINK_COLOR_VAR[e.linkStatus] : '--color-text-tertiary'} />
                     <span className="font-mono text-caption text-secondary">
                       {e.source === node.id ? `→ ${e.target}` : `← ${e.source}`}
                     </span>
                     <span className="rounded-sm bg-surface-secondary px-1.5 text-caption text-tertiary">
                       {EDGE_KIND_LABEL[e.kind]}
                     </span>
-                    <span
-                      className="ml-auto text-caption text-tertiary"
-                      title={e.logEvidence !== 'none' ? EVIDENCE_LABEL[e.logEvidence] : undefined}
-                    >
-                      {LINK_LABEL[e.linkStatus]}
-                    </span>
+                    {running && (
+                      <span
+                        className="ml-auto text-caption text-tertiary"
+                        title={e.logEvidence !== 'none' ? EVIDENCE_LABEL[e.logEvidence] : undefined}
+                      >
+                        {LINK_LABEL[e.linkStatus]}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <Button variant="primary" onClick={onViewTraces}>
-                View Traces
-              </Button>
+              {running && (
+                <Button variant="primary" onClick={onViewTraces}>
+                  View Traces
+                </Button>
+              )}
               <Button onClick={onBlast}>Blast Radius</Button>
               {node.owned && missingLog && (
                 <Button variant="warning-outline" onClick={onEnhance}>
@@ -209,7 +222,7 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
   )
 }
 
-function Header({ node }: { node: ComponentNode }) {
+function Header({ node, running }: { node: ComponentNode; running: boolean }) {
   const close = useOverlayClose()
   return (
     <div className="flex items-start gap-4 border-b border-stroke-light p-5">
@@ -225,8 +238,8 @@ function Header({ node }: { node: ComponentNode }) {
           <span>{NODE_LABEL[node.kind]}</span>
           <span>·</span>
           <span className="inline-flex items-center gap-1">
-            <StatusDot varName={HEALTH_COLOR_VAR[node.health]} />
-            {node.health}
+            <StatusDot varName={running ? HEALTH_COLOR_VAR[node.health] : HEALTH_COLOR_VAR.unknown} />
+            {running ? node.health : 'unknown'}
           </span>
           {node.app && (
             <>
