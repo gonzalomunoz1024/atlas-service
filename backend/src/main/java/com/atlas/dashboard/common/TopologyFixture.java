@@ -18,6 +18,7 @@ import com.atlas.dashboard.common.domain.ComponentNode;
 import com.atlas.dashboard.common.domain.DependencyEdge;
 import com.atlas.dashboard.common.domain.EdgeKind;
 import com.atlas.dashboard.common.domain.EdgeObservation;
+import com.atlas.dashboard.common.domain.LogEvidence;
 import com.atlas.dashboard.common.domain.Health;
 import com.atlas.dashboard.common.domain.NodeKind;
 
@@ -358,10 +359,16 @@ public class TopologyFixture {
             boolean isMissing = MISSING_LOG_EDGES.contains(e.id());
             boolean observed = !isSilent;
             boolean hasLogs = observed && !isMissing;
+            // how the logs prove the traffic: half the healthy edges are confirmed by the
+            // source logging the request+response round trip, the other half by the source's
+            // trace id appearing in the receiver's logs
+            LogEvidence evidence = !hasLogs ? LogEvidence.NONE
+                    : (r.nextBoolean() ? LogEvidence.SOURCE_ROUND_TRIP : LogEvidence.TRACE_CORRELATED);
             out.put(e.id(), new EdgeObservation(
                     e.id(),
                     observed,
                     hasLogs,
+                    evidence,
                     observed ? 40 + r.nextInt(900) : 0,
                     observed ? round4(r.nextDouble() * (isMissing ? 0.06 : 0.02)) : 0,
                     observed ? 12 + r.nextInt(240) : 0));

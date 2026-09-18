@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { HealthMap, HealthEdge } from '../types/atlas'
-import { EDGE_KIND_LABEL, LINK_LABEL } from '../lib/nodeVisuals'
+import { EDGE_KIND_LABEL, EVIDENCE_LABEL, LINK_LABEL } from '../lib/nodeVisuals'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
 import { Button, IconButton } from './ui/Button'
@@ -51,6 +51,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
               <Th onClick={() => toggle('target')} active={sort.key === 'target'} dir={sort.dir}>Target</Th>
               <Th onClick={() => toggle('kind')} active={sort.key === 'kind'} dir={sort.dir}>Type</Th>
               <Th onClick={() => toggle('linkStatus')} active={sort.key === 'linkStatus'} dir={sort.dir}>Status</Th>
+              <th className="px-4 py-2.5 font-medium">Log evidence</th>
               <Th onClick={() => toggle('callsPerMin')} active={sort.key === 'callsPerMin'} dir={sort.dir} num>Calls/min</Th>
               <Th onClick={() => toggle('errorRate')} active={sort.key === 'errorRate'} dir={sort.dir} num>Error %</Th>
               <Th onClick={() => toggle('p95LatencyMs')} active={sort.key === 'p95LatencyMs'} dir={sort.dir} num>p95</Th>
@@ -70,6 +71,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
                     </span>
                   </span>
                 </td>
+                <td className="px-4 py-2.5 text-caption text-secondary">{EVIDENCE_LABEL[e.logEvidence]}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-secondary">
                   {e.observed ? e.callsPerMin.toLocaleString() : '—'}
                 </td>
@@ -144,15 +146,15 @@ function Th({
 }
 
 function downloadCsv(rows: HealthEdge[], nameById: Map<string, string>) {
-  const header = ['source', 'target', 'type', 'status', 'observed', 'has_logs', 'calls_per_min', 'error_rate', 'p95_ms']
+  const header = ['source', 'target', 'type', 'status', 'log_evidence', 'observed', 'calls_per_min', 'error_rate', 'p95_ms']
   const lines = rows.map((e) =>
     [
       nameById.get(e.source) ?? e.source,
       nameById.get(e.target) ?? e.target,
       e.kind,
       e.linkStatus,
+      e.logEvidence,
       e.observed,
-      e.hasLogs,
       e.callsPerMin,
       e.errorRate,
       e.p95LatencyMs,

@@ -38,6 +38,8 @@ interface Props {
   initialSource?: string
   /** present when opened from a red/amber edge — adds the Fix suggestion tab */
   fix?: EdgeFix
+  /** how logs prove this edge's traffic (healthy grey edges) */
+  evidenceNote?: string
   /** Restrict the list to these entry-service names (e.g. traces crossing a clicked edge). */
   restrictSources?: string[]
   onClose: () => void
@@ -51,7 +53,7 @@ const RANGES: { id: string; label: string; ms: number }[] = [
   { id: '6h', label: 'Last 6 hours', ms: 6 * 60 * 60_000 },
 ]
 
-export function TraceDrawer({ component, title, initialSource, restrictSources, fix, onClose, onSynthetic }: Props) {
+export function TraceDrawer({ component, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -107,6 +109,13 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
   return (
     <Drawer onClose={onClose}>
       <Header title={title ?? component} />
+
+      {evidenceNote && (
+        <p className="flex items-center gap-1.5 border-b border-stroke-light px-5 py-2 text-caption text-tertiary">
+          <Icon name="check" size={12} className="shrink-0 text-healthy" />
+          Logged &amp; flowing — {evidenceNote}
+        </p>
+      )}
 
       {/* problem edges get two tabs: the evidence and the fix */}
       {fix && (

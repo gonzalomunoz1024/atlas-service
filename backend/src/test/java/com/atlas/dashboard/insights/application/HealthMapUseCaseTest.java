@@ -16,6 +16,7 @@ import com.atlas.dashboard.common.domain.ComponentNode;
 import com.atlas.dashboard.common.domain.DependencyEdge;
 import com.atlas.dashboard.common.domain.EdgeKind;
 import com.atlas.dashboard.common.domain.EdgeObservation;
+import com.atlas.dashboard.common.domain.LogEvidence;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.LinkStatus;
 import com.atlas.dashboard.insights.ports.outbound.ObservabilityPort;
@@ -49,9 +50,9 @@ class HealthMapUseCaseTest {
                         DependencyEdge.of("svc", "gap-dep", EdgeKind.HTTP)));
 
         Map<String, EdgeObservation> obs = Map.of(
-                "svc->logged-dep", new EdgeObservation("svc->logged-dep", true, true, 200, 0.01, 30),
-                "svc->silent-dep", new EdgeObservation("svc->silent-dep", false, false, 0, 0, 0),
-                "svc->gap-dep", new EdgeObservation("svc->gap-dep", true, false, 150, 0.05, 90));
+                "svc->logged-dep", new EdgeObservation("svc->logged-dep", true, true, LogEvidence.SOURCE_ROUND_TRIP, 200, 0.01, 30),
+                "svc->silent-dep", new EdgeObservation("svc->silent-dep", false, false, LogEvidence.NONE, 0, 0, 0),
+                "svc->gap-dep", new EdgeObservation("svc->gap-dep", true, false, LogEvidence.NONE, 150, 0.05, 90));
 
         when(deepWiki.graph("svc", null)).thenReturn(Mono.just(graph));
         when(observability.edgeObservations("svc", null)).thenReturn(Mono.just(obs));

@@ -21,7 +21,7 @@ import { EnhancementDrawer } from './EnhancementDrawer'
 import { CommandPalette, useCommandK, type PaletteCommand } from './CommandPalette'
 import { ObservabilityMenu } from './ObservabilityMenu'
 import { CallDetailModal } from './CallDetailModal'
-import { EDGE_KIND_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
+import { EDGE_KIND_LABEL, EVIDENCE_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
 
 interface Props {
   component: string
@@ -50,7 +50,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [endpointFilter, setEndpointFilter] = useState<string>('all')
   const [showTable, setShowTable] = useState(false)
   const [hiddenKinds, setHiddenKinds] = useState<Set<NodeKind>>(new Set())
-  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix } | null>(null)
+  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string } | null>(null)
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [enhanceComponent, setEnhanceComponent] = useState<string | null>(null)
@@ -271,7 +271,11 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           thresholdPct: Math.round(healthSettings.errorThreshold * 100),
         }
       }
-      setTraceCtx({ title: `${nameOf(src)} → ${nameOf(tgt)}`, restrictSources: originNames, fix })
+      const evidenceNote =
+        edge.linkStatus === 'healthy' && edge.logEvidence !== 'none'
+          ? EVIDENCE_LABEL[edge.logEvidence].toLowerCase()
+          : undefined
+      setTraceCtx({ title: `${nameOf(src)} → ${nameOf(tgt)}`, restrictSources: originNames, fix, evidenceNote })
     },
     [flowEdgesByOrigin, nameOf, edgeHealth, healthSettings],
   )
@@ -589,6 +593,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             initialSource={traceCtx.source}
             restrictSources={traceCtx.restrictSources}
             fix={traceCtx.fix}
+            evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
             onSynthetic={(traceId) => setSyntheticTrace({ traceId })}
           />

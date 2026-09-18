@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ApiOperation, ComponentNode, HealthEdge, WikiDoc } from '../types/atlas'
 import { api } from '../lib/api'
-import { EDGE_KIND_LABEL, HEALTH_COLOR_VAR, LINK_COLOR_VAR, LINK_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
+import { EDGE_KIND_LABEL, EVIDENCE_LABEL, HEALTH_COLOR_VAR, LINK_COLOR_VAR, LINK_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
 import { NodeGlyph } from './NodeGlyph'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
@@ -97,7 +97,12 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
                     <span className="rounded-sm bg-surface-secondary px-1.5 text-caption text-tertiary">
                       {EDGE_KIND_LABEL[e.kind]}
                     </span>
-                    <span className="ml-auto text-caption text-tertiary">{LINK_LABEL[e.linkStatus]}</span>
+                    <span
+                      className="ml-auto text-caption text-tertiary"
+                      title={e.logEvidence !== 'none' ? EVIDENCE_LABEL[e.logEvidence] : undefined}
+                    >
+                      {LINK_LABEL[e.linkStatus]}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,4 @@
-import type { EdgeKind, Health, LinkStatus, NodeKind } from '../types/atlas'
+import type { EdgeKind, Health, LinkStatus, LogEvidence, NodeKind } from '../types/atlas'
 
 /** CSS variable name driving each node type's color. */
 export const NODE_COLOR_VAR: Record<NodeKind, string> = {
@@ -36,6 +36,13 @@ export const LINK_LABEL: Record<LinkStatus, string> = {
   healthy: 'Logged & flowing',
   missing_logs: 'Missing logs',
   silent: 'No traffic observed',
+}
+
+/** Human wording for how the logs prove an edge's traffic. */
+export const EVIDENCE_LABEL: Record<LogEvidence, string> = {
+  source_round_trip: 'Source logged request + response',
+  trace_correlated: 'Trace id found in receiver logs',
+  none: '—',
 }
 
 export const EDGE_KIND_LABEL: Record<EdgeKind, string> = {

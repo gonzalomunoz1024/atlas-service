@@ -10,6 +10,12 @@ export type EdgeKind = 'http' | 'grpc' | 'kafka' | 'db' | 'mongo' | 'cache'
 /** How a link behaves once topology is joined with observed traffic + logs. */
 export type LinkStatus = 'healthy' | 'missing_logs' | 'silent'
 
+/**
+ * How Splunk logs prove observed traffic: the source logged the request+response
+ * round trip, or the source's trace id appears in the receiver's logs.
+ */
+export type LogEvidence = 'source_round_trip' | 'trace_correlated' | 'none'
+
 export interface ComponentSummary {
   id: string
   name: string
@@ -47,6 +53,7 @@ export interface ComponentGraph {
 export interface HealthEdge extends DependencyEdge {
   observed: boolean
   hasLogs: boolean
+  logEvidence: LogEvidence
   linkStatus: LinkStatus
   callsPerMin: number
   errorRate: number

@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 import com.atlas.dashboard.common.domain.DependencyEdge;
 import com.atlas.dashboard.common.domain.EdgeKind;
 import com.atlas.dashboard.common.domain.EdgeObservation;
+import com.atlas.dashboard.common.domain.LogEvidence;
 
 class MissingLinkDetectorTest {
 
     private static EdgeObservation obs(String id, boolean observed, boolean hasLogs) {
-        return new EdgeObservation(id, observed, hasLogs, observed ? 100 : 0, 0.01, 42);
+        return new EdgeObservation(id, observed, hasLogs,
+                hasLogs ? LogEvidence.SOURCE_ROUND_TRIP : LogEvidence.NONE, observed ? 100 : 0, 0.01, 42);
     }
 
     @Test

@@ -152,6 +152,8 @@ function buildHealthMap(centerName: string, rev?: string): HealthMap {
       ...edge,
       observed,
       hasLogs,
+      // mirrors backend: healthy edges split between the two log-evidence patterns
+      logEvidence: !hasLogs ? 'none' : rand() > 0.5 ? 'source_round_trip' : 'trace_correlated',
       linkStatus: !observed ? 'silent' : hasLogs ? 'healthy' : 'missing_logs',
       callsPerMin: observed ? Math.round(40 + rand() * 900) : 0,
       errorRate: observed ? Number((rand() * (missing ? 0.06 : 0.02)).toFixed(4)) : 0,
