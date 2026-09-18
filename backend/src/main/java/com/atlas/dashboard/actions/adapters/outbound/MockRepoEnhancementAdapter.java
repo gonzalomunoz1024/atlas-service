@@ -96,9 +96,9 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                                     + "same evidence Atlas uses to mark a link healthy.",
                             "Once both sides log the id, this edge flips from amber to a solid grey hairline."),
                     diff,
-                    List.of(
-                            "grafana: p95(opa.decide) > 400ms for 5m → page #guardrails-oncall",
-                            "grafana: rate(opa.decide.error) > 2% for 10m → warn #guardrails-oncall"));
+                    // no alerts here — the fix stays grounded on adding the logging that makes
+                    // the link traceable; alert rules are their own action (AlertingPort)
+                    List.of());
         });
     }
 

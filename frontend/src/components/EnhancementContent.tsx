@@ -65,17 +65,6 @@ export function EnhancementContent({ component }: { component: string }) {
         <DiffBlock diff={plan.diff} />
       </div>
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Alerts</h3>
-        <ul className="space-y-1.5">
-          {plan.suggestedAlerts.map((a, i) => (
-            <li key={i} className="rounded-sm bg-surface-secondary p-2 font-mono text-caption text-secondary">
-              {a}
-            </li>
-          ))}
-        </ul>
-      </div>
-
       <Button
         variant="primary"
         className="w-full py-2.5 disabled:opacity-50"

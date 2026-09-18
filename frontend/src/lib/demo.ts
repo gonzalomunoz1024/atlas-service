@@ -713,10 +713,9 @@ function buildEnhancement(component: string): EnhancementPlan {
       'Once both sides log the id, this edge flips from amber to a solid grey hairline.',
     ],
     diff,
-    suggestedAlerts: [
-      'grafana: p95(opa.decide) > 400ms for 5m → page #guardrails-oncall',
-      'grafana: rate(opa.decide.error) > 2% for 10m → warn #guardrails-oncall',
-    ],
+    // no alerts here — the fix stays grounded on adding the logging that makes the link
+    // traceable; alert rules are their own action (Create Alert Rules)
+    suggestedAlerts: [],
   }
 }
 
