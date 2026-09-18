@@ -40,14 +40,14 @@ export function EdgeHealthSettings({ settings, onChange }: Props) {
 
       {open && (
         <PopoverPanel className="absolute bottom-11 left-0 w-64 origin-bottom-left p-4">
-          <div className="text-sm font-semibold text-primary">Link health</div>
+          <div className="text-sm font-semibold text-primary">Link Health</div>
           <p className="mt-0.5 text-caption text-tertiary">
             Links turn <span className="text-critical">red</span> when the error rate exceeds the
             threshold — otherwise they stay neutral.
           </p>
 
           <label className="mt-4 flex items-center justify-between text-caption text-secondary">
-            <span>Error-rate threshold</span>
+            <span>Error-Rate Threshold</span>
             <span className="font-mono tabular-nums text-primary">
               {Math.round(settings.errorThreshold * 100)}%
             </span>
@@ -63,7 +63,7 @@ export function EdgeHealthSettings({ settings, onChange }: Props) {
           />
 
           <label className="mt-4 flex items-center justify-between text-caption text-secondary">
-            <span>Rolling window</span>
+            <span>Rolling Window</span>
             <span className="font-mono tabular-nums text-primary">{settings.windowMin} min</span>
           </label>
           <input

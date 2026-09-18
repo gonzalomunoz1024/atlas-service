@@ -117,21 +117,21 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
                                 new WikiSection("Purpose",
                                         "Owns the " + lower + " bounded context — policy evaluation, bundle "
                                                 + "management and orchestration of OPA decisions."),
-                                new WikiSection("Tech stack",
+                                new WikiSection("Tech Stack",
                                         "Built with " + lang + ". Stateless and horizontally scaled behind the "
                                                 + "service mesh; configuration via Spring profiles per environment."),
-                                new WikiSection("Repository layout",
+                                new WikiSection("Repository Layout",
                                         "adapters/{inbound,outbound} · application · domain · ports — a "
                                                 + "vertical-slice hexagonal structure, one package per capability."))),
                 new WikiPage("Architecture",
                         "How " + pretty + " is structured internally and how a request flows through it.",
                         List.of(
-                                new WikiSection("Request lifecycle",
+                                new WikiSection("Request Lifecycle",
                                         "1. Inbound adapter validates and maps the request\n"
                                                 + "2. The use case joins policy state with the OPA decision\n"
                                                 + "3. Outbound adapters call downstream stores and services\n"
                                                 + "4. The response is assembled and traced end-to-end"),
-                                new WikiSection("Concurrency model",
+                                new WikiSection("Concurrency Model",
                                         "Fully reactive (Project Reactor). No blocking calls on the event loop; "
                                                 + "downstream I/O is non-blocking and back-pressured."))),
                 new WikiPage("API Reference",
@@ -144,7 +144,7 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
                 new WikiPage("Data & Ownership",
                         "What state " + pretty + " owns and how it persists it.",
                         List.of(
-                                new WikiSection("Owned data",
+                                new WikiSection("Owned Data",
                                         "Reads and writes policy bundles in BPE Mongo DB. Never writes to another "
                                                 + "service’s store; policy decisions are delegated to OPA."),
                                 new WikiSection("Consistency",
@@ -164,7 +164,7 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
                                 new WikiSection("Telemetry",
                                         "Metrics to Grafana, traces to SPLOC, logs to Splunk — correlated by "
                                                 + "trace id."),
-                                new WikiSection("Known gaps",
+                                new WikiSection("Known Gaps",
                                         "NOTE: the OPA policy-decision call path is missing structured logs — see "
                                                 + "the Atlas missing-link finding and the suggested enhancement."))));
 

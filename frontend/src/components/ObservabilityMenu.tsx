@@ -53,7 +53,7 @@ export function ObservabilityMenu({ coverage, onCoverage, onTraces, onWiki }: Pr
             >
               <CoverageRing score={coverage.score} />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm text-primary">Logging coverage</span>
+                <span className="block text-sm text-primary">Logging Coverage</span>
                 <span className="block text-caption2 text-tertiary">
                   {coverage.loggedEdges} of {coverage.observedEdges} live links logged
                 </span>

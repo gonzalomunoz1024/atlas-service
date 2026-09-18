@@ -37,7 +37,7 @@ export function EnhancementContent({ component }: { component: string }) {
 
   if (!plan.diff) {
     return (
-      <EmptyState icon="check" iconClassName="text-healthy" title="Logging looks complete" message={plan.summary} />
+      <EmptyState icon="check" iconClassName="text-healthy" title="Logging Looks Complete" message={plan.summary} />
     )
   }
 
@@ -59,7 +59,7 @@ export function EnhancementContent({ component }: { component: string }) {
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-primary">Suggested diff</h3>
+          <h3 className="text-sm font-semibold text-primary">Suggested Diff</h3>
           <CopyButton text={plan.diff} />
         </div>
         <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed">
@@ -81,7 +81,7 @@ export function EnhancementContent({ component }: { component: string }) {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested alerts</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Alerts</h3>
         <ul className="space-y-1.5">
           {plan.suggestedAlerts.map((a, i) => (
             <li key={i} className="rounded-sm bg-surface-secondary p-2 font-mono text-caption text-secondary">
@@ -92,7 +92,7 @@ export function EnhancementContent({ component }: { component: string }) {
       </div>
 
       <Button variant="primary" className="w-full py-2.5">
-        Open pull request
+        Open Pull Request
       </Button>
     </div>
   )

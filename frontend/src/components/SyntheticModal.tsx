@@ -42,7 +42,7 @@ export function SyntheticModal({ traceId, node, endpoint, onClose }: Props) {
             </div>
             {test.body && (
               <div>
-                <div className="mb-1 text-sm font-semibold text-primary">Request body</div>
+                <div className="mb-1 text-sm font-semibold text-primary">Request Body</div>
                 <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed text-primary">
                   {test.body}
                 </pre>
@@ -72,7 +72,7 @@ function Header() {
         <span className="rounded-sm bg-accent-tint px-2 py-1 text-caption font-semibold text-accent">
           HyperExecute
         </span>
-        <h2 className="text-title3 font-semibold text-primary">Synthetic test</h2>
+        <h2 className="text-title3 font-semibold text-primary">Synthetic Test</h2>
       </div>
       <IconButton label="Close" onClick={close}>
         <Icon name="close" size={18} />

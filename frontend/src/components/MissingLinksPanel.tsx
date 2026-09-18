@@ -30,7 +30,7 @@ export function MissingLinksPanel({ edges, onFocus, pulse }: Props) {
     return (
       <div className="glass flex items-center gap-2 rounded-full border border-stroke-light px-3.5 py-2 shadow-card">
         <Icon name="check" size={13} className="text-healthy" />
-        <span className="text-caption font-medium text-secondary">All links logged</span>
+        <span className="text-caption font-medium text-secondary">All Links Logged</span>
       </div>
     )
   }
@@ -60,7 +60,7 @@ export function MissingLinksPanel({ edges, onFocus, pulse }: Props) {
         <PopoverPanel className="absolute right-0 top-full mt-2 w-72 origin-top-right">
           <div className="flex items-center justify-between border-b border-stroke-light px-4 py-3">
             <div>
-              <span className="text-sm font-semibold text-primary">Missing links</span>
+              <span className="text-sm font-semibold text-primary">Missing Links</span>
               <p className="mt-0.5 text-caption2 text-tertiary">
                 Traffic is flowing — but no logs land in Splunk
               </p>

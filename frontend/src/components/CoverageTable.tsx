@@ -51,7 +51,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
               <Th onClick={() => toggle('target')} active={sort.key === 'target'} dir={sort.dir}>Target</Th>
               <Th onClick={() => toggle('kind')} active={sort.key === 'kind'} dir={sort.dir}>Type</Th>
               <Th onClick={() => toggle('linkStatus')} active={sort.key === 'linkStatus'} dir={sort.dir}>Status</Th>
-              <th className="px-4 py-2.5 font-medium">Log evidence</th>
+              <th className="px-4 py-2.5 font-medium">Log Evidence</th>
               <Th onClick={() => toggle('callsPerMin')} active={sort.key === 'callsPerMin'} dir={sort.dir} num>Calls/min</Th>
               <Th onClick={() => toggle('errorRate')} active={sort.key === 'errorRate'} dir={sort.dir} num>Error %</Th>
               <Th onClick={() => toggle('p95LatencyMs')} active={sort.key === 'p95LatencyMs'} dir={sort.dir} num>p95</Th>
@@ -102,7 +102,7 @@ function TableHeader({ coverage }: { coverage: HealthMap['coverage'] }) {
   return (
     <div className="flex items-start justify-between border-b border-stroke-light p-5">
       <div>
-        <h2 className="text-title3 font-semibold text-primary">Logging coverage</h2>
+        <h2 className="text-title3 font-semibold text-primary">Logging Coverage</h2>
         <p className="mt-1 text-sm text-secondary">
           <span className="font-semibold tabular-nums text-primary">{coverage.score}%</span> —{' '}
           {coverage.loggedEdges} of {coverage.observedEdges} live links reach Splunk

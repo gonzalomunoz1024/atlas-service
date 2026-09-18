@@ -76,7 +76,7 @@ export function IncomingTracesPanel({ nodeName, endpoints: known, traces, onClos
           value={endpoint}
           onChange={setEndpoint}
           ariaLabel="Filter by REST endpoint"
-          options={[{ value: 'all', label: 'All endpoints' }, ...endpoints.map((ep) => ({ value: ep, label: ep }))]}
+          options={[{ value: 'all', label: 'All Endpoints' }, ...endpoints.map((ep) => ({ value: ep, label: ep }))]}
         />
         {endpoint !== 'all' && (
           <p className="mt-1.5 flex items-start gap-1.5 text-caption2 text-tertiary animate-fade-in">
@@ -90,7 +90,7 @@ export function IncomingTracesPanel({ nodeName, endpoints: known, traces, onClos
         {shown.length === 0 ? (
           <EmptyState
             icon="pulse"
-            title="Listening for requests…"
+            title="Listening for Requests…"
             message="Calls hitting this service appear here in real time."
           />
         ) : (

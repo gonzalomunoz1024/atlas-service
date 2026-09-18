@@ -41,21 +41,21 @@ export function CallDetailModal({ call, recent, onClose, onSynthetic }: Props) {
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {/* this call + endpoint-level metrics over the live window */}
         <div className="grid grid-cols-4 gap-3">
-          <Stat label="This call" value={`${call.latencyMs}ms`} />
-          <Stat label={`Avg latency (${agg.calls} seen)`} value={`${agg.avg}ms`} />
-          <Stat label="Error rate (live window)" value={`${agg.errorPct}%`} />
+          <Stat label="This Call" value={`${call.latencyMs}ms`} />
+          <Stat label={`Avg Latency (${agg.calls} seen)`} value={`${agg.avg}ms`} />
+          <Stat label="Error Rate (Live Window)" value={`${agg.errorPct}%`} />
           <Stat label="Received" value={new Date(call.ts).toLocaleTimeString()} />
         </div>
 
         <div className="mt-5">
-          <h3 className="mb-2 text-sm font-semibold text-primary">Trace &amp; logs</h3>
+          <h3 className="mb-2 text-sm font-semibold text-primary">Trace &amp; Logs</h3>
           {!detail ? <Skeleton className="h-32" /> : <TraceWaterfall detail={detail} />}
         </div>
 
         <div className="mt-5 flex items-center gap-2">
           <Button variant="primary" onClick={() => onSynthetic(call.traceId, call.endpoint)}>
             <Icon name="flask" size={14} />
-            Create synthetic transaction
+            Create Synthetic Transaction
           </Button>
           <span className="text-caption text-tertiary">
             Payload generated from the service’s OpenAPI spec via DeepWiki.
@@ -74,7 +74,7 @@ function Header({ call }: { call: IncomingTrace }) {
         <div className="flex items-center gap-2">
           <StatusDot kind={call.status === 'error' ? 'error' : 'ok'} />
           <h2 className="truncate font-mono text-title3 font-semibold text-primary">
-            {call.endpoint ?? 'Incoming call'}
+            {call.endpoint ?? 'Incoming Call'}
           </h2>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-caption text-tertiary">

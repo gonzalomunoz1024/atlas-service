@@ -47,10 +47,10 @@ interface Props {
 }
 
 const RANGES: { id: string; label: string; ms: number }[] = [
-  { id: 'all', label: 'All time', ms: Infinity },
-  { id: '15m', label: 'Last 15 min', ms: 15 * 60_000 },
-  { id: '1h', label: 'Last 1 hour', ms: 60 * 60_000 },
-  { id: '6h', label: 'Last 6 hours', ms: 6 * 60 * 60_000 },
+  { id: 'all', label: 'All Time', ms: Infinity },
+  { id: '15m', label: 'Last 15 Minutes', ms: 15 * 60_000 },
+  { id: '1h', label: 'Last 1 Hour', ms: 60 * 60_000 },
+  { id: '6h', label: 'Last 6 Hours', ms: 6 * 60 * 60_000 },
 ]
 
 export function TraceDrawer({ component, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
@@ -168,7 +168,7 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
             value={source}
             onChange={setSource}
             ariaLabel="Filter by source service"
-            options={[{ value: 'all', label: 'All sources' }, ...sources.map((s) => ({ value: s, label: s }))]}
+            options={[{ value: 'all', label: 'All Sources' }, ...sources.map((s) => ({ value: s, label: s }))]}
           />
           <Select
             className="flex-1"
@@ -190,7 +190,7 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="pulse"
-            title="No traces match these filters"
+            title="No Traces Match These Filters"
             message="Try widening the time range or clearing the source filter."
           />
         ) : (
@@ -223,7 +223,7 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
                       <>
                         <TraceWaterfall detail={detail} />
                         <Button variant="primary" className="mt-4" onClick={() => onSynthetic(t.traceId)}>
-                          Create synthetic test
+                          Create Synthetic Test
                         </Button>
                       </>
                     )}
@@ -267,7 +267,7 @@ function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested fix</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Fix</h3>
         <ul className="space-y-1.5 text-sm text-secondary">
           <li className="flex gap-2"><span className="text-accent">•</span>Add bounded retry with backoff and a hard timeout on the call.</li>
           <li className="flex gap-2"><span className="text-accent">•</span>Alert on the sustained error rate so regressions page the owning team.</li>
@@ -277,7 +277,7 @@ function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-primary">Suggested diff</h3>
+          <h3 className="text-sm font-semibold text-primary">Suggested Diff</h3>
           <CopyButton text={diff} />
         </div>
         <pre className="overflow-x-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed">
@@ -290,7 +290,7 @@ function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested alert</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Alert</h3>
         <p className="rounded-sm bg-surface-secondary p-2 font-mono text-caption text-secondary">{alert}</p>
       </div>
     </div>
@@ -334,7 +334,7 @@ function SilentEdgeEvidence({
   return (
     <div className="space-y-5">
       <div className="rounded-md border border-stroke bg-surface-secondary p-3 text-sm">
-        <p className="font-medium text-primary">Mapped, but no traffic observed</p>
+        <p className="font-medium text-primary">Mapped, but No Traffic Observed</p>
         <p className="mt-1 text-secondary">
           DeepWiki documents this dependency, yet SPLOC recorded zero calls across it in the live
           window — either the calls aren’t instrumented, or the code path is stale.
@@ -342,7 +342,7 @@ function SilentEdgeEvidence({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Evidence of the relationship</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">Evidence of the Relationship</h3>
         <div className="rounded-md border border-stroke-light p-3">
           <p className="font-mono text-caption text-primary">
             {fix.sourceName} → {fix.targetName}
@@ -365,7 +365,7 @@ function SilentEdgeEvidence({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">What this usually means</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">What This Usually Means</h3>
         <ul className="space-y-1.5 text-sm text-secondary">
           <li className="flex gap-2">
             <span className="text-accent">•</span>
@@ -387,7 +387,7 @@ function SilentEdgeEvidence({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested next steps</h3>
+        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Next Steps</h3>
         <ul className="space-y-1.5 text-sm text-secondary">
           <li className="flex gap-2"><span className="text-accent">•</span>Verify tracing instrumentation on {fix.sourceName}’s outbound {fix.edgeKindLabel} client.</li>
           <li className="flex gap-2"><span className="text-accent">•</span>Run a synthetic through the path — if it appears on the map, it was an instrumentation gap.</li>

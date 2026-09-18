@@ -74,13 +74,13 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
           <div className="space-y-5">
             <div className="grid grid-cols-3 gap-3">
               <Stat label="Connections" value={String(related.length)} />
-              <Stat label="Calls / min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
+              <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
               <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
             </div>
 
             {missingLog && (
               <div className="rounded-md border border-warning/40 bg-warning-tint p-3 text-sm">
-                <p className="font-medium text-warning">Logging gap detected</p>
+                <p className="font-medium text-warning">Logging Gap Detected</p>
                 <p className="mt-1 text-secondary">A live call path touching this node has no logs in Splunk.</p>
               </div>
             )}
@@ -110,9 +110,9 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
 
             <div className="flex flex-wrap gap-2 pt-1">
               <Button variant="primary" onClick={onViewTraces}>
-                View traces
+                View Traces
               </Button>
-              <Button onClick={onBlast}>Blast radius</Button>
+              <Button onClick={onBlast}>Blast Radius</Button>
               {node.owned && missingLog && (
                 <Button variant="warning-outline" onClick={onEnhance}>
                   Observability Fix
@@ -138,7 +138,7 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
           (wikiError ? (
             <EmptyState
               icon="doc"
-              title="DeepWiki unavailable"
+              title="DeepWiki Unavailable"
               message="Docs for this node haven’t been generated yet."
             />
           ) : !wiki ? (

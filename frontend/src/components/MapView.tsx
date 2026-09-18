@@ -357,14 +357,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       {
         id: 'act-traces',
         group: 'Actions',
-        label: 'Open traces',
+        label: 'Open Traces',
         icon: 'pulse',
         run: () => setTraceCtx({ title: `${component} · all traces` }),
       },
       {
         id: 'act-coverage',
         group: 'Actions',
-        label: 'Logging coverage',
+        label: 'Logging Coverage',
         icon: 'ring',
         run: () => setShowTable(true),
       },
@@ -396,7 +396,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       {
         id: 'act-fit',
         group: 'Actions',
-        label: 'Fit map to screen',
+        label: 'Fit Map to Screen',
         icon: 'search',
         run: () => graphRef.current?.zoomToFit(),
       },
