@@ -62,8 +62,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [maxDepth, setMaxDepth] = useState(DEFAULT_MAX_DEPTH)
   // gear popover open → freeze the legend chip set so slider drags don't reflow the cluster
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [edgeHealth, setEdgeHealth] = useState<Map<string, 'ok' | 'error'>>(new Map())
-  const errWindow = useRef<Map<string, { ts: number; err: boolean }[]>>(new Map())
+  // per-edge windowed error rates, computed & judged server-side (polled every few seconds)
+  const [edgeRates, setEdgeRates] = useState<Map<string, { ratePct: number; status: 'ok' | 'error' }>>(new Map())
+  const edgeHealth = useMemo(
+    () => new Map(Array.from(edgeRates, ([id, r]) => [id, r.status] as const)),
+    [edgeRates],
+  )
 
   // which revision (environment / commit) the repo is viewed at; undeployed commit → map only
   const [revisions, setRevisions] = useState<RepoRevisions | null>(null)
@@ -87,8 +91,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     setInspect(null)
     setIncoming([])
     setEndpointFilter('all')
-    errWindow.current.clear()
-    setEdgeHealth(new Map())
+    setEdgeRates(new Map())
     setRevisions(null)
     setRepoView(null)
     api
@@ -121,8 +124,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     let cancelled = false
     setMap(null)
     setError(null)
-    errWindow.current.clear()
-    setEdgeHealth(new Map())
+    setEdgeRates(new Map())
     setFullKinds(null)
     api
       .graph(component, revCommit)
@@ -185,11 +187,6 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   const onFlow = useCallback(
     (e: import('../types/atlas').FlowEvent) => {
-      // record every observed call for the rolling per-edge error rate (independent of the view)
-      const edgeId = `${e.source}->${e.target}`
-      const buf = errWindow.current.get(edgeId) ?? []
-      buf.push({ ts: Date.now(), err: e.status === 'error' })
-      errWindow.current.set(edgeId, buf)
       // when inspecting the root node, collect the live requests arriving at it (before any filter)
       if (inspectId && e.target === inspectId) {
         setIncoming((cur) => [toIncoming(e), ...cur].slice(0, 60))
@@ -207,25 +204,28 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const running = repoView?.running ?? true
   const { live } = useFlowStream(component, onFlow, running, revCommit)
 
-  // recompute per-edge health every couple of seconds from the rolling window
+  // windowed error rates come from the observability backend — the window and threshold are
+  // parameters of the query, and the ok/error verdict is made server-side (one rule, no drift)
   useEffect(() => {
-    const recompute = () => {
-      const now = Date.now()
-      const windowMs = healthSettings.windowMin * 60_000
-      const next = new Map<string, 'ok' | 'error'>()
-      errWindow.current.forEach((events, edgeId) => {
-        const recent = events.filter((ev) => now - ev.ts <= windowMs)
-        errWindow.current.set(edgeId, recent)
-        if (recent.length === 0) return
-        const rate = recent.filter((ev) => ev.err).length / recent.length
-        next.set(edgeId, rate > healthSettings.errorThreshold ? 'error' : 'ok')
-      })
-      setEdgeHealth(next)
+    if (!running) {
+      setEdgeRates(new Map())
+      return
     }
-    recompute()
-    const id = window.setInterval(recompute, 2000)
-    return () => window.clearInterval(id)
-  }, [healthSettings])
+    let cancelled = false
+    const load = () =>
+      api
+        .edgeHealth(component, revCommit, healthSettings.windowMin, Math.round(healthSettings.errorThreshold * 100))
+        .then((rows) => {
+          if (!cancelled) setEdgeRates(new Map(rows.map((r) => [r.edgeId, { ratePct: r.ratePct, status: r.status }])))
+        })
+        .catch(() => {})
+    load()
+    const id = window.setInterval(load, 5000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [component, revCommit, running, healthSettings])
 
   // fetch the inspected root node's full endpoint list from DeepWiki (pre-populates the filter)
   useEffect(() => {
@@ -289,16 +289,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           sourceId: src,
           edgeKindLabel: EDGE_KIND_LABEL[edge.kind],
         }
-      } else if (edgeHealth.get(edgeId) === 'error') {
-        const windowMs = healthSettings.windowMin * 60_000
-        const now = Date.now()
-        const recent = (errWindow.current.get(edgeId) ?? []).filter((ev) => now - ev.ts <= windowMs)
-        const rate = recent.length ? recent.filter((ev) => ev.err).length / recent.length : 0
+      } else if (edgeRates.get(edgeId)?.status === 'error') {
         fix = {
           kind: 'error_rate',
           sourceName: nameOf(src),
           targetName: nameOf(tgt),
-          ratePct: rate * 100,
+          ratePct: edgeRates.get(edgeId)!.ratePct,
           windowMin: healthSettings.windowMin,
           thresholdPct: Math.round(healthSettings.errorThreshold * 100),
         }
@@ -309,7 +305,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           : undefined
       setTraceCtx({ title: `${nameOf(src)} → ${nameOf(tgt)}`, restrictSources: originNames, fix, evidenceNote })
     },
-    [flowEdgesByOrigin, nameOf, edgeHealth, healthSettings, repoView],
+    [flowEdgesByOrigin, nameOf, edgeRates, healthSettings, repoView],
   )
 
   // grey-body click on a non-root node: focus the live flow originating from it (toggles off)

@@ -3,7 +3,10 @@ package com.atlas.dashboard.insights.application;
 import org.springframework.stereotype.Service;
 
 import com.atlas.dashboard.common.domain.NodeKindRule;
+import java.util.List;
+
 import com.atlas.dashboard.insights.domain.DepthScope;
+import com.atlas.dashboard.insights.domain.EdgeHealthStatus;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.HealthMap;
 import com.atlas.dashboard.insights.domain.MissingLinkDetector;
@@ -41,5 +44,14 @@ public class HealthMapUseCase implements InsightsInboundPort {
                             MissingLinkDetector.coverage(edges));
                     return maxDepth != null ? DepthScope.apply(map, maxDepth) : map;
                 });
+    }
+
+    @Override
+    public Mono<List<EdgeHealthStatus>> edgeHealth(String component, String rev, int windowMin,
+            double thresholdPct) {
+        return observability.windowedErrorRates(component, rev, windowMin)
+                .map(rates -> rates.entrySet().stream()
+                        .map(e -> EdgeHealthStatus.of(e.getKey(), e.getValue(), thresholdPct / 100.0))
+                        .toList());
     }
 }

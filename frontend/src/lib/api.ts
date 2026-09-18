@@ -1,5 +1,6 @@
 import type {
   ApiOperation,
+  EdgeHealthStatus,
   ComponentGraph,
   ComponentSummary,
   EndpointFlow,
@@ -40,6 +41,20 @@ export const api = {
 
   graph: (name: string, rev?: string): Promise<ComponentGraph> =>
     DEMO_MODE ? demo.graph(name, rev) : get(`/v1/components/${encodeURIComponent(name)}/graph${revQuery(rev)}`),
+
+  /** Windowed error rate per edge, judged against the threshold server-side. */
+  edgeHealth: (
+    component: string,
+    rev?: string,
+    windowMin = 15,
+    thresholdPct = 10,
+  ): Promise<EdgeHealthStatus[]> =>
+    DEMO_MODE
+      ? demo.edgeHealth(component, rev, windowMin, thresholdPct)
+      : get(
+          `/v1/components/${encodeURIComponent(component)}/edge-health?windowMin=${windowMin}&thresholdPct=${thresholdPct}` +
+            (rev ? `&rev=${encodeURIComponent(rev)}` : ''),
+        ),
 
   /** maxDepth limits the map to N hops from the center — scoped & re-scored server-side. */
   healthMap: (name: string, rev?: string, maxDepth?: number): Promise<HealthMap> => {

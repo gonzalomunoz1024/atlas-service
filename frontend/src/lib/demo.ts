@@ -1,5 +1,6 @@
 import type {
   ApiOperation,
+  EdgeHealthStatus,
   ComponentGraph,
   ComponentNode,
   ComponentSummary,
@@ -715,6 +716,31 @@ function buildEnhancement(component: string): EnhancementPlan {
   }
 }
 
+function buildEdgeHealth(
+  component: string,
+  rev: string | undefined,
+  windowMin: number,
+  thresholdPct: number,
+): EdgeHealthStatus[] {
+  // mirrors MockObservabilityAdapter.windowedErrorRates + the insights threshold rule:
+  // deterministic per 2-minute bucket, noisier for short windows, occasional transient spike
+  const bucket = Math.floor(Date.now() / 120_000)
+  const jitter = Math.sqrt(15 / Math.max(1, windowMin))
+  return buildHealthMap(component, rev)
+    .edges.filter((e) => e.observed)
+    .map((e) => {
+      const rand = seeded(`${e.id}:${rev ?? ''}:${windowMin}:${bucket}`)
+      let rate = e.errorRate * (1 + (rand() - 0.5) * 0.8 * jitter)
+      if (rand() < 0.05 * jitter) rate += 0.08 + rand() * 0.1
+      rate = Math.min(1, Math.max(0, rate))
+      return {
+        edgeId: e.id,
+        ratePct: Math.round(rate * 1000) / 10,
+        status: rate > thresholdPct / 100 ? ('error' as const) : ('ok' as const),
+      }
+    })
+}
+
 function buildErrorRatePlan(component: string, target: string): EnhancementPlan {
   // mirrors MockRepoEnhancementAdapter.errorRatePlan
   const s = slug(component)
@@ -856,6 +882,8 @@ export const demo = {
     ),
   graph: (name: string, rev?: string) => wait(buildGraph(name, rev)),
   healthMap: (name: string, rev?: string, maxDepth?: number) => wait(buildHealthMap(name, rev, maxDepth)),
+  edgeHealth: (component: string, rev?: string, windowMin = 15, thresholdPct = 10) =>
+    wait(buildEdgeHealth(component, rev, windowMin, thresholdPct)),
   nodeMetrics: (nodeId: string) => wait(buildMetrics(nodeId)),
   nodeWiki: (nodeId: string) => wait(buildWiki(nodeId)),
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),

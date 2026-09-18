@@ -60,6 +60,13 @@ export interface HealthEdge extends DependencyEdge {
   p95LatencyMs: number
 }
 
+/** Server-judged live edge health: windowed error rate vs the configured threshold. */
+export interface EdgeHealthStatus {
+  edgeId: string
+  ratePct: number
+  status: 'ok' | 'error'
+}
+
 export interface CoverageScore {
   loggedEdges: number
   observedEdges: number

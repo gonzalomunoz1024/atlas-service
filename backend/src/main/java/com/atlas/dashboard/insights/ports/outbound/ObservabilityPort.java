@@ -12,4 +12,7 @@ import reactor.core.publisher.Mono;
  */
 public interface ObservabilityPort {
     Mono<Map<String, EdgeObservation>> edgeObservations(String component, String rev);
+
+    /** Observed error rate (0..1) per edge over the trailing window — what SPLOC/Grafana computes. */
+    Mono<Map<String, Double>> windowedErrorRates(String component, String rev, int windowMin);
 }
