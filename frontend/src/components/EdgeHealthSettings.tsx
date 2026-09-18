@@ -20,20 +20,31 @@ interface Props {
   onChange: (s: HealthSettings) => void
   maxDepth: number
   onMaxDepth: (n: number) => void
+  /** fires on open/close — the legend keeps its chip set stable while the popover is up */
+  onOpenChange?: (open: boolean) => void
 }
 
 /** Gear with two panes: link health (threshold + window) and node settings (graph depth). */
-export function EdgeHealthSettings({ settings, onChange, maxDepth, onMaxDepth }: Props) {
+export function EdgeHealthSettings({ settings, onChange, maxDepth, onMaxDepth, onOpenChange }: Props) {
   const [open, setOpen] = useState(false)
   const [pane, setPane] = useState<'health' | 'nodes'>('health')
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onOpenChange?.(false)
+  }, [onOpenChange])
   useDismiss(ref, open, close)
+
+  const toggleOpen = () => {
+    const next = !open
+    setOpen(next)
+    onOpenChange?.(next)
+  }
 
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         aria-label="Map settings"
         aria-expanded={open}
         className={cx(

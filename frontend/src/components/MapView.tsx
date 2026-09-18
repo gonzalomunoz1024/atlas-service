@@ -60,6 +60,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [healthSettings, setHealthSettings] = useState<HealthSettings>({ errorThreshold: 0.1, windowMin: 15 })
   // how many hops out from the source repository the map reaches (gear-configurable, 1–8)
   const [maxDepth, setMaxDepth] = useState(DEFAULT_MAX_DEPTH)
+  // gear popover open → freeze the legend chip set so slider drags don't reflow the cluster
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [edgeHealth, setEdgeHealth] = useState<Map<string, 'ok' | 'error'>>(new Map())
   const errWindow = useRef<Map<string, { ts: number; err: boolean }[]>>(new Map())
 
@@ -600,12 +602,15 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
         {/* filter chips + observability eye + health settings gear */}
         <div className="absolute bottom-4 left-4 flex items-end gap-2">
-          {/* kinds from the FULL map — a stable chip set, so the depth slider never
-              reflows this cluster (chips popping in/out shoved the gear popover around) */}
+          {/* while the gear popover is up the chip set stays frozen so the depth slider never
+              reflows this cluster (chips popping in/out shoved the popover around); on click-off
+              the chips prune to the kinds actually on the map */}
           <GraphLegend
             hiddenKinds={hiddenKinds}
             onToggle={toggleKind}
-            present={new Set(map.nodes.map((n) => n.kind))}
+            present={
+              new Set((settingsOpen ? map.nodes : visible?.nodes ?? map.nodes).map((n) => n.kind))
+            }
           />
           <ObservabilityMenu
             coverage={running ? visible?.coverage ?? map.coverage : undefined}
@@ -618,6 +623,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onChange={setHealthSettings}
             maxDepth={maxDepth}
             onMaxDepth={setMaxDepth}
+            onOpenChange={setSettingsOpen}
           />
         </div>
 
