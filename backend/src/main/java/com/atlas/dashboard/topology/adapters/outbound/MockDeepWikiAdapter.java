@@ -12,6 +12,7 @@ import com.atlas.dashboard.topology.domain.ApiOperation;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
 import com.atlas.dashboard.topology.domain.EndpointFlow;
+import com.atlas.dashboard.topology.domain.RepoRevisions;
 import com.atlas.dashboard.topology.domain.WikiDoc;
 import com.atlas.dashboard.topology.domain.WikiDoc.WikiPage;
 import com.atlas.dashboard.topology.domain.WikiDoc.WikiSection;
@@ -57,8 +58,24 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
     }
 
     @Override
-    public Mono<com.atlas.dashboard.topology.domain.RepoRevisions> revisions(String component) {
-        return Mono.fromSupplier(() -> fixture.revisions(component));
+    public Mono<RepoRevisions> revisions(String component) {
+        // deployed environments + recent commits for the repo; the dev entry shares the fixture's
+        // dev commit so the per-revision topology (S3 only in dev) stays in sync
+        return Mono.fromSupplier(() -> {
+            String repo = "registry.internal/" + fixture.slug(component);
+            String dev = fixture.devCommit();
+            var environments = List.of(
+                    new RepoRevisions.Environment("prod", "9f8e7d6", repo + ":1.24.0"),
+                    new RepoRevisions.Environment("test", "e4f5a6b", repo + ":test-e4f5a6b"),
+                    new RepoRevisions.Environment("dev", dev, repo + ":dev-" + dev));
+            var commits = List.of(
+                    new RepoRevisions.CommitRef("3c1aa90", "wip: batch-evaluate concurrency", null),
+                    new RepoRevisions.CommitRef(dev, "feat: sandbox OPA policy cache", "dev"),
+                    new RepoRevisions.CommitRef("e4f5a6b", "fix: null policy-bundle handling", "test"),
+                    new RepoRevisions.CommitRef("9f8e7d6", "release: guardrails 1.24.0", "prod"),
+                    new RepoRevisions.CommitRef("77d0c12", "chore: bump spring-boot 3.4.1", null));
+            return new RepoRevisions(environments, commits);
+        });
     }
 
     @Override

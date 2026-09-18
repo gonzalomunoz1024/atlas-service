@@ -88,6 +88,11 @@ public class TopologyFixture {
     private static final DependencyEdge S3_EDGE =
             DependencyEdge.of("guardrails-orchestrator", "s3-bucket", EdgeKind.HTTP);
 
+    /** The dev environment's commit — the one revision whose topology includes S3. */
+    public String devCommit() {
+        return S3_COMMIT;
+    }
+
     /** The S3 dependency exists only in the dev revision (its commit). */
     private boolean hasS3(String rev) {
         return S3_COMMIT.equals(rev);
@@ -173,29 +178,6 @@ public class TopologyFixture {
      * Deployed environments and recent commits for a repository. Prod is the default view; a commit
      * not deployed anywhere can be mapped but shows no live flow (nothing is running it).
      */
-    public com.atlas.dashboard.topology.domain.RepoRevisions revisions(String component) {
-        String repo = "registry.internal/" + slug(component);
-        var environments = List.of(
-                new com.atlas.dashboard.topology.domain.RepoRevisions.Environment(
-                        "prod", "9f8e7d6", repo + ":1.24.0"),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.Environment(
-                        "test", "e4f5a6b", repo + ":test-e4f5a6b"),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.Environment(
-                        "dev", "a1b2c3d", repo + ":dev-a1b2c3d"));
-        var commits = List.of(
-                new com.atlas.dashboard.topology.domain.RepoRevisions.CommitRef(
-                        "3c1aa90", "wip: batch-evaluate concurrency", null),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.CommitRef(
-                        "a1b2c3d", "feat: sandbox OPA policy cache", "dev"),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.CommitRef(
-                        "e4f5a6b", "fix: null policy-bundle handling", "test"),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.CommitRef(
-                        "9f8e7d6", "release: guardrails 1.24.0", "prod"),
-                new com.atlas.dashboard.topology.domain.RepoRevisions.CommitRef(
-                        "77d0c12", "chore: bump spring-boot 3.4.1", null));
-        return new com.atlas.dashboard.topology.domain.RepoRevisions(environments, commits);
-    }
-
     /** REST endpoints each service exposes — what an incoming HTTP call lands on. */
     private static final Map<String, List<String>> ENDPOINTS = Map.of(
             "guardrails-orchestrator", List.of(
