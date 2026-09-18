@@ -60,6 +60,21 @@ export interface HealthEdge extends DependencyEdge {
   p95LatencyMs: number
 }
 
+/** One proposed alert rule; system is the platform it belongs to. */
+export interface AlertRule {
+  system: 'splunk' | 'sploc'
+  name: string
+  query: string
+  rationale: string
+}
+
+/** Alert rules derived from a trace's call path — ready to create in Splunk / SPLOC. */
+export interface AlertPlan {
+  traceId: string
+  summary: string
+  rules: AlertRule[]
+}
+
 /** Server-judged live edge health: windowed error rate vs the configured threshold. */
 export interface EdgeHealthStatus {
   edgeId: string
@@ -181,7 +196,11 @@ export interface TraceDetail {
   spans: Span[]
 }
 
-export interface SyntheticTest {
+/** The kind of test generated from a trace — future kinds (e.g. performance) slot in here. */
+export type TestType = 'synthetic'
+
+export interface GeneratedTest {
+  type: TestType
   id: string
   name: string
   method: string

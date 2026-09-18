@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.atlas.dashboard.actions.application.ActionsUseCase;
+import com.atlas.dashboard.actions.domain.AlertPlan;
 import com.atlas.dashboard.actions.domain.EnhancementPlan;
-import com.atlas.dashboard.actions.domain.SyntheticTest;
+import com.atlas.dashboard.actions.domain.GeneratedTest;
+import com.atlas.dashboard.actions.domain.TestType;
 import com.atlas.dashboard.actions.ports.inbound.ActionsInboundPort;
 
 import lombok.RequiredArgsConstructor;
@@ -22,17 +24,29 @@ public class RestControllerActionsAdapter implements ActionsInboundPort {
     private final ActionsUseCase useCase;
 
     @Override
-    @PostMapping("/synthetics/from-trace/{traceId}")
-    public Mono<SyntheticTest> syntheticFromTrace(@PathVariable String traceId,
+    public Mono<GeneratedTest> testFromTrace(String traceId, String node, String endpoint, TestType type) {
+        return useCase.testFromTrace(traceId, node, endpoint, type);
+    }
+
+    @PostMapping("/tests/from-trace/{traceId}")
+    public Mono<GeneratedTest> testFromTraceHttp(@PathVariable String traceId,
             @RequestParam(required = false) String node,
-            @RequestParam(required = false) String endpoint) {
-        return useCase.syntheticFromTrace(traceId, node, endpoint);
+            @RequestParam(required = false) String endpoint,
+            @RequestParam(defaultValue = "synthetic") String type) {
+        return testFromTrace(traceId, node, endpoint, TestType.valueOf(type.toUpperCase()));
     }
 
     @Override
     @PostMapping("/enhancements/{component}")
     public Mono<EnhancementPlan> enhancement(@PathVariable String component) {
         return useCase.enhancement(component);
+    }
+
+    @Override
+    @PostMapping("/alerts/from-trace/{traceId}")
+    public Mono<AlertPlan> alertsFromTrace(@RequestParam String component,
+            @PathVariable String traceId) {
+        return useCase.alertsFromTrace(component, traceId);
     }
 
     @Override

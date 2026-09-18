@@ -50,6 +50,7 @@ interface Props {
   visibleSources?: string[]
   onClose: () => void
   onSynthetic: (traceId: string) => void
+  onAlerts: (traceId: string) => void
 }
 
 // Splunk-style time range: each preset maps to an `earliest` time modifier sent with the
@@ -78,7 +79,7 @@ function timeAgo(iso: string): string {
   return `${Math.round(s / 86_400)}d ago`
 }
 
-export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, onClose, onSynthetic, onAlerts }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -332,9 +333,12 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                     ) : (
                       <>
                         <TraceWaterfall detail={detail} />
-                        <Button variant="primary" className="mt-4" onClick={() => onSynthetic(t.traceId)}>
-                          Create Synthetic Test
-                        </Button>
+                        <div className="mt-4 flex gap-2">
+                          <Button variant="primary" onClick={() => onSynthetic(t.traceId)}>
+                            Create Synthetic Test
+                          </Button>
+                          <Button onClick={() => onAlerts(t.traceId)}>Create Alert Rules</Button>
+                        </div>
                       </>
                     )}
                   </div>

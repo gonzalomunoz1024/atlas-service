@@ -17,6 +17,7 @@ import type { RepoView } from './EnvironmentSelector'
 import { CoverageTable } from './CoverageTable'
 import { TraceDrawer, type EdgeFix } from './TraceDrawer'
 import { SyntheticModal } from './SyntheticModal'
+import { AlertRulesModal } from './AlertRulesModal'
 import { EnhancementDrawer } from './EnhancementDrawer'
 import { CommandPalette, useCommandK, type PaletteCommand } from './CommandPalette'
 import { ObservabilityMenu } from './ObservabilityMenu'
@@ -53,6 +54,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string } | null>(null)
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
+  const [alertTrace, setAlertTrace] = useState<string | null>(null)
   const [enhanceComponent, setEnhanceComponent] = useState<string | null>(null)
   const graphRef = useRef<GraphHandle>(null)
 
@@ -644,6 +646,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
             onSynthetic={(traceId) => setSyntheticTrace({ traceId })}
+            onAlerts={setAlertTrace}
           />
         )}
 
@@ -653,6 +656,10 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onClose={() => setShowTable(false)}
           />
         )}
+        {alertTrace && (
+          <AlertRulesModal component={component} traceId={alertTrace} onClose={() => setAlertTrace(null)} />
+        )}
+
         {syntheticTrace && (
           <SyntheticModal
             traceId={syntheticTrace.traceId}

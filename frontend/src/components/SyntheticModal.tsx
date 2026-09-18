@@ -1,26 +1,32 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
-import type { SyntheticTest } from '../types/atlas'
+import type { GeneratedTest, TestType } from '../types/atlas'
 import { CopyButton } from './CopyButton'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
 import { IconButton } from './ui/Button'
 import { Skeleton } from './ui/Skeleton'
 
+export const TEST_TYPE_LABEL: Record<TestType, string> = {
+  synthetic: 'Synthetic Test',
+}
+
 interface Props {
   traceId: string
   /** observed call context — lets HyperExecute build the payload from the OpenAPI spec */
   node?: string
   endpoint?: string
+  /** which kind of test to generate — synthetic today, more kinds later */
+  type?: TestType
   onClose: () => void
 }
 
-export function SyntheticModal({ traceId, node, endpoint, onClose }: Props) {
-  const [test, setTest] = useState<SyntheticTest | null>(null)
+export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', onClose }: Props) {
+  const [test, setTest] = useState<GeneratedTest | null>(null)
 
   useEffect(() => {
-    api.syntheticFromTrace(traceId, { node, endpoint }).then(setTest).catch(() => setTest(null))
-  }, [traceId, node, endpoint])
+    api.testFromTrace(traceId, { node, endpoint, type }).then(setTest).catch(() => setTest(null))
+  }, [traceId, node, endpoint, type])
 
   return (
     <Modal onClose={onClose} raised width="max-w-2xl">

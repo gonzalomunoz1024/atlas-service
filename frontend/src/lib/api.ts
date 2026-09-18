@@ -1,4 +1,5 @@
 import type {
+  AlertPlan,
   ApiOperation,
   EdgeHealthStatus,
   ComponentGraph,
@@ -9,7 +10,8 @@ import type {
   HealthMap,
   RepoRevisions,
   NodeMetrics,
-  SyntheticTest,
+  GeneratedTest,
+  TestType,
   TraceDetail,
   TraceSummary,
   WikiDoc,
@@ -103,16 +105,17 @@ export const api = {
   revisions: (component: string): Promise<RepoRevisions> =>
     DEMO_MODE ? demo.revisions(component) : get(`/v1/components/${encodeURIComponent(component)}/revisions`),
 
-  syntheticFromTrace: (
+  /** Generate a test from a trace — `type` picks the kind (synthetic today, performance later). */
+  testFromTrace: (
     traceId: string,
-    opts?: { node?: string; endpoint?: string },
-  ): Promise<SyntheticTest> =>
+    opts?: { node?: string; endpoint?: string; type?: TestType },
+  ): Promise<GeneratedTest> =>
     DEMO_MODE
-      ? demo.syntheticFromTrace(traceId, opts?.node, opts?.endpoint)
+      ? demo.testFromTrace(traceId, opts?.node, opts?.endpoint, opts?.type ?? 'synthetic')
       : post(
-          `/v1/synthetics/from-trace/${encodeURIComponent(traceId)}` +
+          `/v1/tests/from-trace/${encodeURIComponent(traceId)}?type=${opts?.type ?? 'synthetic'}` +
             (opts?.node && opts?.endpoint
-              ? `?node=${encodeURIComponent(opts.node)}&endpoint=${encodeURIComponent(opts.endpoint)}`
+              ? `&node=${encodeURIComponent(opts.node)}&endpoint=${encodeURIComponent(opts.endpoint)}`
               : ''),
         ),
 
@@ -123,6 +126,14 @@ export const api = {
 
   enhancement: (component: string): Promise<EnhancementPlan> =>
     DEMO_MODE ? demo.enhancement(component) : post(`/v1/enhancements/${encodeURIComponent(component)}`),
+
+  /** Alert rules for Splunk/SPLOC derived from a trace's call path. */
+  alertsFromTrace: (component: string, traceId: string): Promise<AlertPlan> =>
+    DEMO_MODE
+      ? demo.alertsFromTrace(component, traceId)
+      : post(
+          `/v1/alerts/from-trace/${encodeURIComponent(traceId)}?component=${encodeURIComponent(component)}`,
+        ),
 
   errorRateEnhancement: (component: string, target: string): Promise<EnhancementPlan> =>
     DEMO_MODE

@@ -1,10 +1,11 @@
 package com.atlas.dashboard.actions.ports.outbound;
 
-import com.atlas.dashboard.actions.domain.SyntheticTest;
+import com.atlas.dashboard.actions.domain.GeneratedTest;
+import com.atlas.dashboard.actions.domain.TestType;
 
 import reactor.core.publisher.Mono;
 
 /** HyperExecute: turns an observed trace into a runnable synthetic test spec. */
 public interface HyperExecutePort {
-    Mono<SyntheticTest> fromTrace(String traceId, String node, String endpoint);
+    Mono<GeneratedTest> fromTrace(String traceId, String node, String endpoint, TestType type);
 }

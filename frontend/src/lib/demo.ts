@@ -1,4 +1,5 @@
 import type {
+  AlertPlan,
   ApiOperation,
   EdgeHealthStatus,
   ComponentGraph,
@@ -17,7 +18,8 @@ import type {
   RepoRevisions,
   NodeMetrics,
   Span,
-  SyntheticTest,
+  GeneratedTest,
+  TestType,
   TraceDetail,
   TraceSummary,
   WikiDoc,
@@ -574,7 +576,7 @@ export function nextFlowEvent(_center: string, seq: number): FlowEvent {
 }
 
 /* --- actions -------------------------------------------------------------- */
-function buildSynthetic(traceId: string, node?: string, endpoint?: string): SyntheticTest {
+function buildSynthetic(traceId: string, node?: string, endpoint?: string): GeneratedTest {
   // when the observed call names its endpoint, generate the payload from the OpenAPI spec
   if (node && endpoint) {
     const sp = endpoint.indexOf(' ')
@@ -599,6 +601,7 @@ function buildSynthetic(traceId: string, node?: string, endpoint?: string): Synt
       '      - responseTime < 800',
     ].join('\n')
     return {
+      type: 'synthetic',
       id: `syn-${traceId}`,
       name: `Replay of ${traceId}`,
       method,
@@ -630,6 +633,7 @@ function buildSynthetic(traceId: string, node?: string, endpoint?: string): Synt
     '      - responseTime < 800',
   ].join('\n')
   return {
+    type: 'synthetic',
     id: `syn-${traceId}`,
     name: `Replay of ${traceId}`,
     method: 'POST',
@@ -739,6 +743,42 @@ function buildEdgeHealth(
         status: rate > thresholdPct / 100 ? ('error' as const) : ('ok' as const),
       }
     })
+}
+
+function buildAlertPlan(component: string, traceId: string): AlertPlan {
+  // mirrors MockAlertingAdapter: rules derived from the component's observed topology
+  const edges = buildHealthMap(component).edges.filter((e) => e.observed)
+  const s = slug(component)
+  const rules: AlertPlan['rules'] = []
+  for (const e of edges) {
+    if (e.hasLogs) continue
+    rules.push({
+      system: 'splunk',
+      name: `Logging gap regression: ${e.id}`,
+      query: `index=prod service="${e.target}" traceId=* earliest=-15m | stats count | where count == 0`,
+      rationale: `This hop carries live traffic but writes no logs (seen on ${traceId}). Fire while it stays silent so the gap can't regress unnoticed.`,
+    })
+  }
+  rules.push({
+    system: 'splunk',
+    name: `Error spike: ${s}`,
+    query: `index=prod service="${s}" level=ERROR earliest=-15m | timechart span=5m count | where count > 25`,
+    rationale: 'Errors on the service this trace flows through — page before callers notice.',
+  })
+  const slowest = [...edges].sort((a, b) => b.p95LatencyMs - a.p95LatencyMs)[0]
+  if (slowest) {
+    rules.push({
+      system: 'sploc',
+      name: `Latency guard: ${slowest.id}`,
+      query: `p95(span.duration{edge="${slowest.id}"}) > ${slowest.p95LatencyMs * 2}ms for 10m`,
+      rationale: `The slowest hop on this path runs at p95 ${slowest.p95LatencyMs}ms — alert at 2× before it degrades the whole trace.`,
+    })
+  }
+  return {
+    traceId,
+    summary: `${rules.length} alert rules derived from ${traceId}'s call path — logging-gap regression, error spike, and a latency guard.`,
+    rules,
+  }
 }
 
 function buildErrorRatePlan(component: string, target: string): EnhancementPlan {
@@ -909,8 +949,9 @@ export const demo = {
       ],
     })
   },
-  syntheticFromTrace: (traceId: string, node?: string, endpoint?: string) =>
+  testFromTrace: (traceId: string, node?: string, endpoint?: string, _type: TestType = 'synthetic') =>
     wait(buildSynthetic(traceId, node, endpoint)),
   enhancement: (component: string) => wait(buildEnhancement(component)),
   errorRateEnhancement: (component: string, target: string) => wait(buildErrorRatePlan(component, target)),
+  alertsFromTrace: (component: string, traceId: string) => wait(buildAlertPlan(component, traceId)),
 }

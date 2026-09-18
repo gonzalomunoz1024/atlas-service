@@ -5,7 +5,8 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
-import com.atlas.dashboard.actions.domain.SyntheticTest;
+import com.atlas.dashboard.actions.domain.GeneratedTest;
+import com.atlas.dashboard.actions.domain.TestType;
 import com.atlas.dashboard.actions.ports.outbound.HyperExecutePort;
 import com.atlas.dashboard.common.TopologyFixture;
 
@@ -19,7 +20,11 @@ public class MockHyperExecuteAdapter implements HyperExecutePort {
     private final TopologyFixture fixture;
 
     @Override
-    public Mono<SyntheticTest> fromTrace(String traceId, String node, String endpoint) {
+    public Mono<GeneratedTest> fromTrace(String traceId, String node, String endpoint, TestType type) {
+        // one branch per test kind — a future PERFORMANCE type adds its own generator here
+        if (type != TestType.SYNTHETIC) {
+            return Mono.error(new IllegalArgumentException("Unsupported test type: " + type));
+        }
         return Mono.fromSupplier(() -> {
             // when the observed call names its endpoint, generate the payload from the service's
             // OpenAPI spec (via DeepWiki) instead of a canned example
@@ -61,7 +66,8 @@ public class MockHyperExecuteAdapter implements HyperExecutePort {
                     "      - status == 200",
                     "      - responseTime < 800");
 
-            return new SyntheticTest(
+            return new GeneratedTest(
+                    type,
                     "syn-" + traceId,
                     "Replay of " + traceId,
                     method,
