@@ -10,14 +10,14 @@ interface Props {
   coverage?: CoverageScore
   onCoverage?: () => void
   onTraces?: () => void
-  onWiki?: () => void
+  onOverview?: () => void
 }
 
 /**
  * The observability entry point — an eye in the bottom-left cluster. Opens
  * upward with the logging-coverage ring, traces, and DeepWiki.
  */
-export function ObservabilityMenu({ coverage, onCoverage, onTraces, onWiki }: Props) {
+export function ObservabilityMenu({ coverage, onCoverage, onTraces, onOverview }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
@@ -70,13 +70,13 @@ export function ObservabilityMenu({ coverage, onCoverage, onTraces, onWiki }: Pr
               Traces
             </button>
           )}
-          {onWiki && (
+          {onOverview && (
             <button
-              onClick={pick(onWiki)}
+              onClick={pick(onOverview)}
               className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-secondary transition-colors hover:bg-surface-secondary hover:text-primary"
             >
-              <Icon name="doc" size={15} className="text-tertiary" />
-              DeepWiki
+              <Icon name="info" size={15} className="text-tertiary" />
+              Overview
             </button>
           )}
         </PopoverPanel>

@@ -341,6 +341,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     })
   }, [])
 
+  const openRootModal = (tab: 'overview' | 'wiki') => {
+    const center = map?.nodes.find((n) => n.center)
+    if (center) {
+      setModalTab(tab)
+      setSelected(center)
+    }
+  }
+
   // ⌘K commands: jump to any node, run the headline actions, switch components
   const paletteCommands = useMemo<PaletteCommand[]>(() => {
     if (!map) return []
@@ -378,12 +386,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         group: 'Actions',
         label: 'Open DeepWiki',
         icon: 'doc',
-        run: () => {
-          if (center) {
-            setModalTab('wiki')
-            setSelected(center)
-          }
-        },
+        run: () => openRootModal('wiki'),
       },
       // only offered when the map actually shows a logging gap leaving the root service,
       // so the enhancement popup can never contradict the graph
@@ -408,14 +411,6 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     ]
     return [...actions, ...nodeCmds]
   }, [map, component, repoView])
-
-  const openWiki = () => {
-    const center = map?.nodes.find((n) => n.center)
-    if (center) {
-      setModalTab('wiki')
-      setSelected(center)
-    }
-  }
 
   const header = (
     <AppHeader
@@ -564,7 +559,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             coverage={running ? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
             onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
-            onWiki={openWiki}
+            onOverview={() => openRootModal('overview')}
           />
           <EdgeHealthSettings settings={healthSettings} onChange={setHealthSettings} />
         </div>
