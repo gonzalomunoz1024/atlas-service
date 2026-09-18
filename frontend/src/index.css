@@ -113,7 +113,7 @@
   --node-service: #2a78d6;   /* blue    */
   --node-kafka: #eb6834;     /* orange  */
   --node-database: #4a3aa7;  /* violet  */
-  --node-mongo: #008300;     /* green   */
+  --node-store: #008300;     /* green   */
   --node-cache: #d1568a;     /* magenta */
   --node-external: #8a8a8f;  /* gray    */
 
@@ -183,7 +183,7 @@
   --node-service: #3987e5;
   --node-kafka: #d95926;
   --node-database: #9085e9;
-  --node-mongo: #1aa81a;
+  --node-store: #1aa81a;
   --node-cache: #d55181;
   --node-external: #98989d;
 
