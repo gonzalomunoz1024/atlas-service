@@ -338,9 +338,11 @@ export const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
         cooldownTicks={140}
         autoPauseRedraw={false}
         nodeRelSize={6}
-        /* draggable nodes swallow single clicks (any 1px mouse move becomes a d3 drag,
-           cancelling the click) — the layout is fixed by design, so disable dragging */
-        enableNodeDrag={false}
+        /* dragging is safe alongside our own tap detection (capture-phase, ≤6px = tap):
+           d3-drag suppressing the browser click no longer matters, and a real drag moves
+           >6px so it never double-fires as a tap. Dragging reheats the simulation, so a
+           node pulls its neighbours along, and it stays pinned where it's dropped. */
+        enableNodeDrag={true}
         onRenderFramePre={() => {
           const now = performance.now()
           frameDt.current = Math.min(50, now - frameNow.current)
