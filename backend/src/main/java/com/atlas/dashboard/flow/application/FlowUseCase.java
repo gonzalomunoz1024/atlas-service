@@ -14,17 +14,18 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.atlas.dashboard.common.TopologyFixture;
 import com.atlas.dashboard.common.domain.CallStatus;
 import com.atlas.dashboard.common.domain.DependencyEdge;
 import com.atlas.dashboard.common.domain.EdgeKind;
 import com.atlas.dashboard.common.domain.EdgeObservation;
+import com.atlas.dashboard.common.domain.TopologyRules;
 import com.atlas.dashboard.flow.domain.FlowEvent;
 import com.atlas.dashboard.flow.domain.FlowRoute;
 import com.atlas.dashboard.flow.domain.Span;
 import com.atlas.dashboard.flow.domain.TraceDetail;
 import com.atlas.dashboard.flow.domain.TraceSummary;
 import com.atlas.dashboard.flow.ports.inbound.FlowInboundPort;
+import com.atlas.dashboard.flow.ports.outbound.FlowTopologyPort;
 import com.atlas.dashboard.flow.ports.outbound.SplocPort;
 import com.atlas.dashboard.flow.ports.outbound.SplunkPort;
 
@@ -36,16 +37,16 @@ public class FlowUseCase implements FlowInboundPort {
 
     private final SplocPort sploc;
     private final SplunkPort splunk;
-    private final TopologyFixture fixture;
+    private final FlowTopologyPort topology;
     private final Clock clock;
     private final Duration emitInterval;
     private final AtomicLong seq = new AtomicLong();
 
-    public FlowUseCase(SplocPort sploc, SplunkPort splunk, TopologyFixture fixture, Clock clock,
+    public FlowUseCase(SplocPort sploc, SplunkPort splunk, FlowTopologyPort topology, Clock clock,
             @Value("${atlas.flow.emit-interval-ms:900}") long emitIntervalMs) {
         this.sploc = sploc;
         this.splunk = splunk;
-        this.fixture = fixture;
+        this.topology = topology;
         this.clock = clock;
         this.emitInterval = Duration.ofMillis(emitIntervalMs);
     }
@@ -78,7 +79,7 @@ public class FlowUseCase implements FlowInboundPort {
         if (routes.isEmpty()) {
             return Flux.empty();
         }
-        Map<String, EdgeObservation> obs = fixture.edgeObservations(component, rev);
+        Map<String, EdgeObservation> obs = topology.edgeObservations(component, rev);
         int[] cursor = new int[routes.size()];
 
         // round-robin the routes each tick, advancing each route's own cursor, so several real
@@ -136,7 +137,7 @@ public class FlowUseCase implements FlowInboundPort {
         if (hop.kind() != EdgeKind.HTTP) {
             return null;
         }
-        List<String> endpoints = fixture.endpoints(hop.target());
+        List<String> endpoints = topology.endpoints(hop.target());
         if (endpoints.isEmpty()) {
             return null;
         }
@@ -150,18 +151,19 @@ public class FlowUseCase implements FlowInboundPort {
 
     /** Build one route per entry point, over observed edges, honouring channel semantics. */
     private List<Route> buildRoutes(String component, String rev) {
-        Set<String> observed = fixture.edgeObservations(component, rev).values().stream()
+        List<DependencyEdge> edges = topology.edges(component, rev);
+        Set<String> observed = topology.edgeObservations(component, rev).values().stream()
                 .filter(EdgeObservation::observed)
                 .map(EdgeObservation::edgeId)
                 .collect(java.util.stream.Collectors.toSet());
         Map<String, List<DependencyEdge>> out = new LinkedHashMap<>();
-        for (DependencyEdge e : fixture.edges(component, rev)) {
+        for (DependencyEdge e : edges) {
             if (observed.contains(e.id())) {
                 out.computeIfAbsent(e.source(), k -> new ArrayList<>()).add(e);
             }
         }
         List<Route> routes = new ArrayList<>();
-        for (String entry : fixture.entryPoints()) {
+        for (String entry : TopologyRules.entryPoints(edges, topology.serviceIds(component, rev))) {
             List<DependencyEdge> hops = channelWalk(entry, out);
             if (!hops.isEmpty()) {
                 routes.add(new Route(entry, hops));

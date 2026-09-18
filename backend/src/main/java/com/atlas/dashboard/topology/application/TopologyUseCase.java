@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import com.atlas.dashboard.common.domain.NodeKindRule;
 import com.atlas.dashboard.topology.domain.ApiOperation;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
@@ -28,12 +29,17 @@ public class TopologyUseCase implements TopologyInboundPort {
 
     @Override
     public Flux<ComponentSummary> search(String query) {
-        return deepWiki.search(query == null ? "" : query);
+        return deepWiki.search(query == null ? "" : query)
+                .map(s -> new ComponentSummary(s.id(), s.name(),
+                        NodeKindRule.effective(s.kind(), s.owned()), s.app(), s.owned()));
     }
 
     @Override
     public Mono<ComponentGraph> graph(String component, String rev) {
-        return deepWiki.graph(component, rev);
+        // presentation-domain rule applied here so every adapter (mock or real) gets it
+        return deepWiki.graph(component, rev)
+                .map(g -> new ComponentGraph(g.center(),
+                        g.nodes().stream().map(NodeKindRule::apply).toList(), g.edges()));
     }
 
     @Override

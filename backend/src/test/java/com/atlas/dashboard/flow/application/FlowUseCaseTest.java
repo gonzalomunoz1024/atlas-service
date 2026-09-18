@@ -15,12 +15,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.atlas.dashboard.common.TopologyFixture;
 import com.atlas.dashboard.common.domain.CallStatus;
 import com.atlas.dashboard.flow.domain.LogLine;
 import com.atlas.dashboard.flow.domain.LogLine.LogLevel;
 import com.atlas.dashboard.flow.domain.Span;
 import com.atlas.dashboard.flow.domain.TraceDetail;
+import com.atlas.dashboard.flow.ports.outbound.FlowTopologyPort;
 import com.atlas.dashboard.flow.ports.outbound.SplocPort;
 import com.atlas.dashboard.flow.ports.outbound.SplunkPort;
 
@@ -32,13 +32,14 @@ class FlowUseCaseTest {
 
     @Mock private SplocPort sploc;
     @Mock private SplunkPort splunk;
+    @Mock private FlowTopologyPort topology;
 
     private FlowUseCase useCase;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC);
-        useCase = new FlowUseCase(sploc, splunk, new TopologyFixture(), clock, 900);
+        useCase = new FlowUseCase(sploc, splunk, topology, clock, 900);
     }
 
     @Test

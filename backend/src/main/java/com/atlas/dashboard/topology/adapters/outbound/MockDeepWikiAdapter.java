@@ -79,7 +79,8 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
     @Override
     public Mono<List<EndpointFlow>> endpoints(String nodeId) {
         // the request path from the original invoker into this node is shared by all its endpoints
-        List<String> upstream = fixture.upstreamEdges(nodeId);
+        List<String> upstream = com.atlas.dashboard.common.domain.TopologyRules.upstreamEdges(
+                nodeId, fixture.edges(nodeId, null), fixture.serviceIds(null));
         return Mono.fromSupplier(() -> fixture.endpoints(nodeId).stream()
                 .map(ep -> {
                     java.util.LinkedHashSet<String> edges = new java.util.LinkedHashSet<>(upstream);

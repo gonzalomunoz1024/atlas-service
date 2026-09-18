@@ -132,15 +132,14 @@ public class TopologyFixture {
     public List<ComponentNode> nodes(String center, String rev) {
         String c = resolveCenter(center);
         List<ComponentNode> out = new ArrayList<>();
+        // raw specs — the unowned-service → external presentation rule is applied by the use
+        // cases (NodeKindRule), so real adapters get the same treatment as this mock data
         for (NodeSpec s : nodeSpecsFor(rev)) {
             boolean owned = OUR_APP.equals(s.app());
-            // consistency rule: a service another org owns IS an external service — the legend,
-            // the node colour, and the modal must all say so, not just the modal
-            NodeKind kind = s.kind() == NodeKind.SERVICE && !owned ? NodeKind.EXTERNAL : s.kind();
             if (s.id().equals(c)) {
-                out.add(new ComponentNode(s.id(), s.name(), kind, s.app(), s.cluster(), owned, Health.HEALTHY, true));
+                out.add(new ComponentNode(s.id(), s.name(), s.kind(), s.app(), s.cluster(), owned, Health.HEALTHY, true));
             } else {
-                out.add(ComponentNode.of(s.id(), s.name(), kind, s.app(), s.cluster(), owned,
+                out.add(ComponentNode.of(s.id(), s.name(), s.kind(), s.app(), s.cluster(), owned,
                         health(rng(s.id() + ":health"))));
             }
         }
@@ -153,6 +152,17 @@ public class TopologyFixture {
 
     public List<DependencyEdge> edges(String center, String rev) {
         return edgesFor(rev);
+    }
+
+    /** Ids of raw service-class nodes (potential traffic origins), per revision. */
+    public java.util.Set<String> serviceIds(String rev) {
+        java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+        for (NodeSpec s : nodeSpecsFor(rev)) {
+            if (s.kind() == NodeKind.SERVICE) {
+                ids.add(s.id());
+            }
+        }
+        return ids;
     }
 
     public NodeSpec spec(String nodeId) {
@@ -275,78 +285,6 @@ public class TopologyFixture {
     /** Edge ids a given endpoint on a node triggers downstream (empty when it calls nothing). */
     public List<String> endpointDownstream(String nodeId, String endpoint) {
         return ENDPOINT_DOWNSTREAM.getOrDefault(nodeId, Map.of()).getOrDefault(endpoint, List.of());
-    }
-
-    /**
-     * Edge ids on the request path(s) that lead <em>into</em> a node, from each original invoker
-     * (entry point) down to the node — channel-correct (a synchronous request never travels the
-     * Kafka bus). Lets a flow be shown end-to-end, starting at the invoker, not just downstream.
-     */
-    public List<String> upstreamEdges(String target) {
-        Map<String, List<DependencyEdge>> out = new LinkedHashMap<>();
-        for (DependencyEdge e : EDGES) {
-            out.computeIfAbsent(e.source(), k -> new ArrayList<>()).add(e);
-        }
-        record Frontier(String id, boolean async) {
-        }
-        Set<String> collected = new LinkedHashSet<>();
-        for (String entry : entryPoints()) {
-            // channel-correct BFS from the invoker, recording the edge each node was reached by
-            Map<String, DependencyEdge> parent = new HashMap<>();
-            Set<String> seen = new HashSet<>();
-            seen.add(entry);
-            Deque<Frontier> queue = new ArrayDeque<>();
-            queue.add(new Frontier(entry, false));
-            while (!queue.isEmpty()) {
-                Frontier f = queue.poll();
-                boolean isOrigin = f.id().equals(entry);
-                for (DependencyEdge e : out.getOrDefault(f.id(), List.of())) {
-                    boolean kafka = e.kind() == EdgeKind.KAFKA;
-                    if (!isOrigin && !f.async() && kafka) {
-                        continue;
-                    }
-                    if (seen.add(e.target())) {
-                        parent.put(e.target(), e);
-                        queue.add(new Frontier(e.target(), f.async() || kafka));
-                    }
-                }
-            }
-            // walk parents back from the target to the invoker, collecting the path edges
-            String cur = target;
-            while (parent.containsKey(cur)) {
-                DependencyEdge e = parent.get(cur);
-                collected.add(e.id());
-                cur = e.source();
-            }
-        }
-        return new ArrayList<>(collected);
-    }
-
-    /**
-     * Entry points that originate traffic into the platform — derived from the topology, not
-     * hardcoded, so it keeps working against real data. A node is an entry point when it is a
-     * service that emits calls (has outbound edges) but receives no <em>synchronous</em> inbound
-     * call; it may still receive asynchronous (Kafka) responses to flows it started. This yields
-     * VMForge (HTTP caller) and Lightspeed (event producer); downstream services like the
-     * Orchestrator or Registry — which receive HTTP calls — are excluded.
-     */
-    public List<String> entryPoints() {
-        Set<String> hasOutbound = new HashSet<>();
-        Set<String> hasSyncInbound = new HashSet<>();
-        for (DependencyEdge e : EDGES) {
-            hasOutbound.add(e.source());
-            if (e.kind() != EdgeKind.KAFKA) {
-                hasSyncInbound.add(e.target());
-            }
-        }
-        List<String> entries = new ArrayList<>();
-        for (NodeSpec s : NODES) {
-            if (s.kind() == NodeKind.SERVICE && hasOutbound.contains(s.id())
-                    && !hasSyncInbound.contains(s.id())) {
-                entries.add(s.id());
-            }
-        }
-        return entries;
     }
 
     public Map<String, EdgeObservation> edgeObservations(String center) {

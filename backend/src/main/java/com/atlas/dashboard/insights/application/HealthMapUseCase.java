@@ -2,6 +2,7 @@ package com.atlas.dashboard.insights.application;
 
 import org.springframework.stereotype.Service;
 
+import com.atlas.dashboard.common.domain.NodeKindRule;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.HealthMap;
 import com.atlas.dashboard.insights.domain.MissingLinkDetector;
@@ -34,7 +35,7 @@ public class HealthMapUseCase implements InsightsInboundPort {
                     java.util.List<HealthEdge> edges = MissingLinkDetector.annotateAll(graph.edges(), obs);
                     return new HealthMap(
                             graph.center(),
-                            graph.nodes(),
+                            graph.nodes().stream().map(NodeKindRule::apply).toList(),
                             edges,
                             MissingLinkDetector.coverage(edges));
                 });
