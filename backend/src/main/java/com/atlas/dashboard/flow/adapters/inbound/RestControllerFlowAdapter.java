@@ -28,8 +28,10 @@ public class RestControllerFlowAdapter {
     public Flux<TraceSummary> traces(
             @RequestParam String component,
             @RequestParam(defaultValue = "12") int limit,
-            @RequestParam(required = false) String rev) {
-        return useCase.recentTraces(component, limit, rev);
+            @RequestParam(required = false) String rev,
+            @RequestParam(required = false) String earliest,
+            @RequestParam(required = false) String latest) {
+        return useCase.recentTraces(component, limit, rev, earliest, latest);
     }
 
     @GetMapping("/traces/{traceId}")

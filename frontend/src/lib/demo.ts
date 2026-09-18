@@ -244,22 +244,60 @@ function buildTrace(traceId: string): TraceDetail {
   }
 }
 
-function buildTraceSummaries(component: string, limit: number, rev?: string): TraceSummary[] {
-  // traces are per-environment: each deployed revision has its own recent set
+/** Candidate pool per (component, rev) — a Splunk window cuts it down, never grows it. */
+const TRACE_POOL = 48
+const SEVEN_DAYS_MS = 7 * 24 * 3_600_000
+const UNIT_MS: Record<string, number> = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 }
+
+/** Splunk time modifier → epoch ms: "now", "-15m"/"-4h"/"-7d", or an absolute ISO instant. */
+function parseSplunkTime(modifier: string | undefined, now: number, fallback: number): number {
+  if (!modifier) return fallback
+  const m = (modifier.includes('@') ? modifier.slice(0, modifier.indexOf('@')) : modifier).trim()
+  if (m === 'now') return now
+  const rel = /^([+-])(\d+)([smhdw])$/.exec(m)
+  if (rel) {
+    const ms = UNIT_MS[rel[3]] * Number(rel[2])
+    return rel[1] === '-' ? now - ms : now + ms
+  }
+  const abs = Date.parse(m)
+  return Number.isNaN(abs) ? fallback : abs
+}
+
+function buildTraceSummaries(
+  component: string,
+  limit: number,
+  rev?: string,
+  earliest?: string,
+  latest?: string,
+): TraceSummary[] {
+  // traces are per-environment: each deployed revision has its own recent set.
+  // Splunk semantics: the pool spans the last 7 days (cubed skew towards now, like real
+  // traffic), and the earliest/latest window filters it before the limit.
   const rand = seeded(resolveCenter(component) + ':traces' + (rev ?? ''))
-  return Array.from({ length: limit }, (_, i) => {
+  const now = Date.now()
+  const from = parseSplunkTime(earliest, now, 0)
+  const to = parseSplunkTime(latest, now, now)
+  return Array.from({ length: TRACE_POOL }, (_, i) => {
     const traceId = `trc-gr-${(1000 + Math.round(rand() * 8999)).toString(16)}${i}`
+    const u = rand()
+    const startedAt = new Date(now - u * u * u * SEVEN_DAYS_MS).toISOString()
     const detail = buildTrace(traceId)
     return {
       traceId,
       entryService: NAME_BY_ID.get(detail.spans[0].nodeId) ?? detail.spans[0].service,
-      startedAt: detail.startedAt,
+      startedAt,
       durationMs: detail.durationMs,
       status: detail.status,
       spanCount: detail.spans.length,
       hasLogGaps: detail.spans.some((s) => !s.hasLogs),
     }
-  }).sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
+  })
+    .filter((t) => {
+      const s = Date.parse(t.startedAt)
+      return s >= from && s <= to
+    })
+    .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
+    .slice(0, limit)
 }
 
 /* --- live flow feed (used by useFlowStream in demo mode) ------------------- */
@@ -757,7 +795,8 @@ export const demo = {
   nodeWiki: (nodeId: string) => wait(buildWiki(nodeId)),
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),
   nodeOpenApi: (nodeId: string): Promise<ApiOperation[]> => wait(buildOpenApi(nodeId)),
-  traces: (component: string, limit: number, rev?: string) => wait(buildTraceSummaries(component, limit, rev)),
+  traces: (component: string, limit: number, rev?: string, earliest?: string, latest?: string) =>
+    wait(buildTraceSummaries(component, limit, rev, earliest, latest)),
   trace: (traceId: string) => wait(buildTrace(traceId)),
   flows: (_component: string, _rev?: string) => wait(buildFlows()),
   revisions: (component: string): Promise<RepoRevisions> => {

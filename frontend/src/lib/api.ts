@@ -61,12 +61,15 @@ export const api = {
       ? demo.nodeEndpoints(nodeId)
       : get(`/v1/components/${encodeURIComponent(name)}/nodes/${encodeURIComponent(nodeId)}/endpoints`),
 
-  traces: (component: string, limit = 12, rev?: string): Promise<TraceSummary[]> =>
+  /** earliest/latest are Splunk time modifiers ("-15m", "now", ISO instant) — the query is Splunk's. */
+  traces: (component: string, limit = 12, rev?: string, earliest?: string, latest?: string): Promise<TraceSummary[]> =>
     DEMO_MODE
-      ? demo.traces(component, limit, rev)
+      ? demo.traces(component, limit, rev, earliest, latest)
       : get(
           `/v1/traces?component=${encodeURIComponent(component)}&limit=${limit}` +
-            (rev ? `&rev=${encodeURIComponent(rev)}` : ''),
+            (rev ? `&rev=${encodeURIComponent(rev)}` : '') +
+            (earliest ? `&earliest=${encodeURIComponent(earliest)}` : '') +
+            (latest ? `&latest=${encodeURIComponent(latest)}` : ''),
         ),
 
   trace: (traceId: string): Promise<TraceDetail> =>

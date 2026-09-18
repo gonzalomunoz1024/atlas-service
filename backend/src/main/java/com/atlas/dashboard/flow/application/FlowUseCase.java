@@ -51,8 +51,8 @@ public class FlowUseCase implements FlowInboundPort {
     }
 
     @Override
-    public Flux<TraceSummary> recentTraces(String component, int limit, String rev) {
-        return sploc.recentTraces(component, Math.max(1, Math.min(limit, 50)), rev);
+    public Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest, String latest) {
+        return sploc.recentTraces(component, Math.max(1, Math.min(limit, 50)), rev, earliest, latest);
     }
 
     @Override

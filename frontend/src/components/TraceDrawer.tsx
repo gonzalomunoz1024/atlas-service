@@ -50,12 +50,31 @@ interface Props {
   onSynthetic: (traceId: string) => void
 }
 
-const RANGES: { id: string; label: string; ms: number }[] = [
-  { id: 'all', label: 'All Time', ms: Infinity },
-  { id: '15m', label: 'Last 15 Minutes', ms: 15 * 60_000 },
-  { id: '1h', label: 'Last 1 Hour', ms: 60 * 60_000 },
-  { id: '6h', label: 'Last 6 Hours', ms: 6 * 60 * 60_000 },
+// Splunk-style time range: each preset maps to an `earliest` time modifier sent with the
+// Splunk query (we don't filter client-side — the search itself is windowed).
+const RANGES: { id: string; label: string; earliest?: string }[] = [
+  { id: 'all', label: 'All Time' },
+  { id: '15m', label: 'Last 15 Minutes', earliest: '-15m' },
+  { id: '60m', label: 'Last 60 Minutes', earliest: '-60m' },
+  { id: '4h', label: 'Last 4 Hours', earliest: '-4h' },
+  { id: '24h', label: 'Last 24 Hours', earliest: '-24h' },
+  { id: '7d', label: 'Last 7 Days', earliest: '-7d' },
+  { id: 'custom', label: 'Custom Range…' },
 ]
+
+/** epoch ms → value for a datetime-local input, in the viewer's zone */
+function toLocalInput(ms: number): string {
+  const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60_000)
+  return d.toISOString().slice(0, 16)
+}
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60) return `${Math.round(s)}s ago`
+  if (s < 3_600) return `${Math.round(s / 60)}m ago`
+  if (s < 86_400) return `${Math.round(s / 3_600)}h ago`
+  return `${Math.round(s / 86_400)}d ago`
+}
 
 export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
@@ -67,13 +86,22 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
   const [source, setSource] = useState<string>(initialSource ?? 'all')
   const [range, setRange] = useState<string>('all')
 
+  // custom (absolute) window — staged in the inputs, sent to Splunk on Apply
+  const [customFrom, setCustomFrom] = useState(() => toLocalInput(Date.now() - 4 * 3_600_000))
+  const [customTo, setCustomTo] = useState(() => toLocalInput(Date.now()))
+  const [applied, setApplied] = useState<{ earliest: string; latest: string } | null>(null)
+
+  const earliest = range === 'custom' ? applied?.earliest : RANGES.find((r) => r.id === range)?.earliest
+  const latest = range === 'custom' ? applied?.latest : undefined
+
   useEffect(() => {
     if (!running) {
       setTraces([])
       return
     }
-    api.traces(component, 14, rev).then(setTraces).catch(() => setTraces([]))
-  }, [component, rev, running])
+    setTraces(null)
+    api.traces(component, 40, rev, earliest, latest).then(setTraces).catch(() => setTraces([]))
+  }, [component, rev, running, earliest, latest])
 
   // when opened for a specific node, pre-select that source
   useEffect(() => {
@@ -101,18 +129,16 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
     return Array.from(set).sort()
   }, [scoped, source])
 
+  // the time window is applied by the Splunk query itself; only source + id narrow client-side
   const filtered = useMemo(() => {
     if (!scoped) return null
-    const now = Date.now()
-    const rangeMs = RANGES.find((r) => r.id === range)?.ms ?? Infinity
     const q = query.trim().toLowerCase()
     return scoped.filter((t) => {
       if (source !== 'all' && t.entryService !== source) return false
       if (q && !t.traceId.toLowerCase().includes(q)) return false
-      if (rangeMs !== Infinity && now - new Date(t.startedAt).getTime() > rangeMs) return false
       return true
     })
-  }, [scoped, source, query, range])
+  }, [scoped, source, query])
 
   return (
     <Drawer onClose={onClose}>
@@ -190,10 +216,52 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
             className="flex-1"
             value={range}
             onChange={setRange}
-            ariaLabel="Filter by time range"
+            ariaLabel="Time range for the Splunk query"
             options={RANGES.map((r) => ({ value: r.id, label: r.label }))}
           />
         </div>
+
+        {/* Splunk-style absolute window: pick earliest/latest, then run the search */}
+        {range === 'custom' && (
+          <div className="flex items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-caption2 text-tertiary">
+              Earliest
+              <input
+                type="datetime-local"
+                value={customFrom}
+                max={customTo}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="no-focus-ring rounded-md border border-stroke-light bg-surface-secondary px-2 py-1.5 text-caption text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+              />
+            </label>
+            <label className="flex flex-1 flex-col gap-1 text-caption2 text-tertiary">
+              Latest
+              <input
+                type="datetime-local"
+                value={customTo}
+                min={customFrom}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="no-focus-ring rounded-md border border-stroke-light bg-surface-secondary px-2 py-1.5 text-caption text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+              />
+            </label>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setApplied({
+                  earliest: new Date(customFrom).toISOString(),
+                  latest: new Date(customTo).toISOString(),
+                })
+              }
+            >
+              Apply
+            </Button>
+          </div>
+        )}
+
+        {/* the window is part of the search we send to Splunk, not a client-side filter */}
+        <p className="font-mono text-caption2 text-tertiary">
+          splunk · earliest={earliest ?? '0'} · latest={latest ?? 'now'}
+        </p>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -228,7 +296,10 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                   {t.status === 'error' && (
                     <span className="shrink-0 text-[10px] font-medium text-critical">error</span>
                   )}
-                  <span className="ml-auto shrink-0 text-caption tabular-nums text-tertiary">{t.durationMs}ms</span>
+                  <span className="ml-auto flex shrink-0 flex-col items-end">
+                    <span className="text-caption tabular-nums text-tertiary">{t.durationMs}ms</span>
+                    <span className="text-[10px] tabular-nums text-tertiary">{timeAgo(t.startedAt)}</span>
+                  </span>
                 </button>
 
                 {openId === t.traceId && (

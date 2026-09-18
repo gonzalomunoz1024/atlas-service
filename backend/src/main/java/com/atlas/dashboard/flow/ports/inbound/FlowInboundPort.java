@@ -11,7 +11,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface FlowInboundPort {
-    Flux<TraceSummary> recentTraces(String component, int limit, String rev);
+    /** earliest/latest are Splunk time modifiers ("-15m", "now", ISO instant); null = unbounded. */
+    Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest, String latest);
 
     Mono<TraceDetail> trace(String traceId);
 
