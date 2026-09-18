@@ -2,7 +2,7 @@ import type { NodeKind } from '../types/atlas'
 import { NODE_COLOR_VAR, NODE_LABEL } from '../lib/nodeVisuals'
 import { cx } from '../lib/cx'
 
-const ORDER: NodeKind[] = ['service', 'kafka', 'database', 'store', 'cache', 'external']
+const ORDER: NodeKind[] = ['service', 'queue', 'database', 'store', 'cache', 'external']
 
 interface Props {
   hiddenKinds: Set<NodeKind>

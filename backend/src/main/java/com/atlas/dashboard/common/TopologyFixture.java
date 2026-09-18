@@ -58,8 +58,8 @@ public class TopologyFixture {
             new NodeSpec("vmforge", "VMForge", NodeKind.SERVICE, "CLAUT", null),
             new NodeSpec("lightspeed", "Lightspeed Platform Service", NodeKind.SERVICE, "BPE", null),
             new NodeSpec("bpe-mongo", "BPE Mongo DB", NodeKind.STORE, "BPE", null),
-            new NodeSpec("evt-request", "GuardrailsEvaluationRequestedEvent", NodeKind.KAFKA, "BPE", KAFKA_CLUSTER),
-            new NodeSpec("evt-response", "GuardrailsEvaluationResponseEvent", NodeKind.KAFKA, "BPE", KAFKA_CLUSTER));
+            new NodeSpec("evt-request", "GuardrailsEvaluationRequestedEvent", NodeKind.QUEUE, "BPE", KAFKA_CLUSTER),
+            new NodeSpec("evt-response", "GuardrailsEvaluationResponseEvent", NodeKind.QUEUE, "BPE", KAFKA_CLUSTER));
 
     private static final List<DependencyEdge> EDGES = List.of(
             DependencyEdge.of("guardrails-client", "guardrails-orchestrator", EdgeKind.HTTP),

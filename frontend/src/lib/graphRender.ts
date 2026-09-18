@@ -28,7 +28,7 @@ export interface GraphPalette {
 }
 
 export function resolvePalette(): GraphPalette {
-  const kinds: NodeKind[] = ['service', 'kafka', 'database', 'store', 'cache', 'external']
+  const kinds: NodeKind[] = ['service', 'queue', 'database', 'store', 'cache', 'external']
   return {
     dark: document.documentElement.classList.contains('dark'),
     bgEdge: cssVar('--graph-bg-edge'),

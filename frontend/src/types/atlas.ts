@@ -3,7 +3,7 @@
    (com.atlas.dashboard.*.domain.dto).
    ========================================================================== */
 
-export type NodeKind = 'service' | 'kafka' | 'database' | 'store' | 'cache' | 'external'
+export type NodeKind = 'service' | 'queue' | 'database' | 'store' | 'cache' | 'external'
 export type Health = 'healthy' | 'degraded' | 'critical' | 'unknown'
 export type EdgeKind = 'http' | 'grpc' | 'kafka' | 'db' | 'mongo' | 'cache'
 

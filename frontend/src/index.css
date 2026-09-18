@@ -111,7 +111,7 @@
 
   /* Node-type categorical palette (CVD-validated, light surface) */
   --node-service: #2a78d6;   /* blue    */
-  --node-kafka: #eb6834;     /* orange  */
+  --node-queue: #eb6834;     /* orange  */
   --node-database: #4a3aa7;  /* violet  */
   --node-store: #008300;     /* green   */
   --node-cache: #d1568a;     /* magenta */
@@ -181,7 +181,7 @@
   --color-warning-bg: rgba(255, 159, 10, 0.15);
 
   --node-service: #3987e5;
-  --node-kafka: #d95926;
+  --node-queue: #d95926;
   --node-database: #9085e9;
   --node-store: #1aa81a;
   --node-cache: #d55181;

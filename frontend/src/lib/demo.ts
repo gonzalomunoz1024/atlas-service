@@ -65,8 +65,8 @@ const NODES: NodeSpec[] = [
   { id: 'vmforge', name: 'VMForge', kind: 'service', app: 'CLAUT' },
   { id: 'lightspeed', name: 'Lightspeed Platform Service', kind: 'service', app: 'BPE' },
   { id: 'bpe-mongo', name: 'BPE Mongo DB', kind: 'store', app: 'BPE' },
-  { id: 'evt-request', name: 'GuardrailsEvaluationRequestedEvent', kind: 'kafka', app: 'BPE', cluster: KAFKA_CLUSTER },
-  { id: 'evt-response', name: 'GuardrailsEvaluationResponseEvent', kind: 'kafka', app: 'BPE', cluster: KAFKA_CLUSTER },
+  { id: 'evt-request', name: 'GuardrailsEvaluationRequestedEvent', kind: 'queue', app: 'BPE', cluster: KAFKA_CLUSTER },
+  { id: 'evt-response', name: 'GuardrailsEvaluationResponseEvent', kind: 'queue', app: 'BPE', cluster: KAFKA_CLUSTER },
 ]
 
 const EDGE_DEFS: [string, string, EdgeKind][] = [

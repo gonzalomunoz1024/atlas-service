@@ -3,7 +3,7 @@ import type { EdgeKind, Health, LinkStatus, LogEvidence, NodeKind } from '../typ
 /** CSS variable name driving each node type's color. */
 export const NODE_COLOR_VAR: Record<NodeKind, string> = {
   service: '--node-service',
-  kafka: '--node-kafka',
+  queue: '--node-queue',
   database: '--node-database',
   store: '--node-store',
   cache: '--node-cache',
@@ -12,7 +12,7 @@ export const NODE_COLOR_VAR: Record<NodeKind, string> = {
 
 export const NODE_LABEL: Record<NodeKind, string> = {
   service: 'Service',
-  kafka: 'Kafka topic',
+  queue: 'Message Queue',
   database: 'Database',
   store: 'Data Store',
   cache: 'Cache',
