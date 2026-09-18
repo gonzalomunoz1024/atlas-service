@@ -273,7 +273,7 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
 
         {/* the window is part of the search we send to Splunk, not a client-side filter */}
         <p className="font-mono text-caption2 text-tertiary">
-          splunk · earliest={earliest ?? '0'} · latest={latest ?? 'now'}
+          {earliest ? `splunk · earliest=${earliest} · latest=${latest ?? 'now'}` : 'splunk · all time'}
         </p>
       </div>
 
