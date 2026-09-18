@@ -129,7 +129,7 @@ export function TraceDrawer({ component, title, initialSource, restrictSources, 
                 (view === v ? 'bg-surface-secondary text-primary' : 'text-secondary hover:text-primary')
               }
             >
-              {v === 'traces' ? 'Traces' : fix.kind === 'silent' ? 'Evidence' : 'Fix suggestion'}
+              {v === 'traces' ? 'Traces' : fix.kind === 'silent' ? 'Evidence' : 'Observability Fix'}
             </button>
           ))}
         </div>

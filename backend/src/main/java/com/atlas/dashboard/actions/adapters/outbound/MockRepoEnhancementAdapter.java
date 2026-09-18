@@ -50,28 +50,40 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
             String diff = String.join("\n",
                     "--- a/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
                     "+++ b/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
-                    "@@",
+                    "@@ caller: propagate the trace id in the headers and log it",
                     " public Mono<Decision> decide(PolicyRequest req) {",
-                    "+    log.info(\"opa.decide.start traceId={} subject={}\", tracer.currentTraceId(), req.subject());",
+                    "+    String traceparent = tracer.currentTraceparent();",
+                    "+    log.info(\"opa.decide.request traceId={} subject={}\", tracer.currentTraceId(), req.subject());",
                     "     return opaWebClient.post()",
                     "         .uri(\"/v1/data/guardrails/allow\")",
+                    "+        .header(\"traceparent\", traceparent)",
                     "         .bodyValue(req)",
                     "         .retrieve()",
                     "         .bodyToMono(Decision.class)",
-                    "+        .doOnNext(d -> log.info(\"opa.decide.ok traceId={} allow={}\", tracer.currentTraceId(), d.allow()))",
-                    "+        .doOnError(e -> log.error(\"opa.decide.error traceId={}\", tracer.currentTraceId(), e));",
-                    " }");
+                    "+        .doOnNext(d -> log.info(\"opa.decide.response traceId={} allow={}\", tracer.currentTraceId(), d.allow()));",
+                    " }",
+                    "",
+                    "--- a/receiver: log the propagated trace id on arrival",
+                    "+++ b/src/main/java/.../TraceLogFilter.java",
+                    "@@ receiver: read traceparent from the headers and log it",
+                    "+public Mono<Void> filter(ServerWebExchange ex, WebFilterChain chain) {",
+                    "+    String traceId = TraceContext.from(ex.getRequest().getHeaders().getFirst(\"traceparent\"));",
+                    "+    log.info(\"request.received traceId={} path={}\", traceId, ex.getRequest().getPath());",
+                    "+    return chain.filter(ex);",
+                    "+}");
             return new EnhancementPlan(
                     component,
                     owned,
                     component + " → " + String.join(", ", gapTargets) + " is missing structured logs on "
-                            + "the policy-decision path, so its decisions never reach Splunk. Add MDC "
-                            + "trace-id logging and a latency alert.",
+                            + "the policy-decision path. Propagate the trace id in the request headers and "
+                            + "log it on both sides, so the same id shows up in both services' logs.",
                     List.of(
                             "DeepWiki shows a live call edge to " + String.join(", ", gapTargets)
                                     + ", but Splunk has zero correlated log events for it.",
-                            "Adding trace-id-scoped start/ok/error logs restores end-to-end policy-decision visibility.",
-                            "A Grafana p95 alert closes the loop so regressions page the owning team."),
+                            "Carrying the trace id in the headers (W3C traceparent) and logging it on both "
+                                    + "the caller and the receiver makes every call correlate in Splunk — the "
+                                    + "same evidence Atlas uses to mark a link healthy.",
+                            "Once both sides log the id, this edge flips from amber to a solid grey hairline."),
                     diff,
                     List.of(
                             "grafana: p95(opa.decide) > 400ms for 5m → page #guardrails-oncall",

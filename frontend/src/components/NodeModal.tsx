@@ -115,7 +115,7 @@ export function NodeModal({ component, node, edges, initialTab = 'overview', onC
               <Button onClick={onBlast}>Blast radius</Button>
               {node.owned && missingLog && (
                 <Button variant="warning-outline" onClick={onEnhance}>
-                  Enhance logging
+                  Observability Fix
                 </Button>
               )}
             </div>

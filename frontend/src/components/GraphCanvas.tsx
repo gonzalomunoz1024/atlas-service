@@ -64,6 +64,8 @@ interface Props {
   edgeHealth?: Map<string, 'ok' | 'error'>
   /** while now < this timestamp, missing-log edges swell softly (insight moment) */
   shimmerMissingUntil?: number
+  /** viewing an undeployed commit: topology only, no observability — every edge is a plain hairline */
+  staticTopology?: boolean
   onNodeInspect?: (node: ComponentNode) => void
   onNodeFlow?: (node: ComponentNode) => void
   onEdgeClick?: (edge: HealthEdge) => void
@@ -84,6 +86,7 @@ export const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
     hiddenKinds,
     edgeHealth,
     shimmerMissingUntil,
+    staticTopology,
     onNodeInspect,
     onNodeFlow,
     onEdgeClick,
@@ -400,13 +403,24 @@ export const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
           link._e = (link._e ?? 1) + ((target - (link._e ?? 1)) * k)
           const e = link._e
 
-          const health = link.linkStatus === 'healthy' && edgeHealth?.get(link.id) === 'error'
+          const health =
+            !staticTopology && link.linkStatus === 'healthy' && edgeHealth?.get(link.id) === 'error'
           const curv = link.curvature ?? 0
 
           ctx.save()
           ctx.globalAlpha = spawn
 
-          if (link.linkStatus === 'missing_logs') {
+          if (staticTopology) {
+            // no observability for this revision — just the documented relationship
+            const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y)
+            const base = pal.dark ? '#ebebf5' : '#3c3c43'
+            grad.addColorStop(0, withAlpha(base, (pal.dark ? 0.1 : 0.13) * Math.min(1.6, e)))
+            grad.addColorStop(1, withAlpha(base, (pal.dark ? 0.26 : 0.3) * Math.min(1.6, e)))
+            traceLinkPath(ctx, s, t, curv)
+            ctx.strokeStyle = grad
+            ctx.lineWidth = highlighted || hovered ? 2 : 1.15
+            ctx.stroke()
+          } else if (link.linkStatus === 'missing_logs') {
             // insight shimmer: soft swell while the moment is live
             let glow = 0.16
             if (shimmerMissingUntil && now < shimmerMissingUntil) {

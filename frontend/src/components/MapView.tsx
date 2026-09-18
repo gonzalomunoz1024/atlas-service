@@ -108,6 +108,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     let cancelled = false
     setMap(null)
     setError(null)
+    errWindow.current.clear()
+    setEdgeHealth(new Map())
     api
       .healthMap(component, revCommit)
       .then((m) => !cancelled && setMap(m))
@@ -132,7 +134,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   // insight moment: when the loaded map has logging gaps, draw the eye — once, softly
   useEffect(() => {
-    if (!map) return
+    if (!map || !(repoView?.running ?? true)) return
     const key = `${component}@${revCommit ?? ''}`
     if (insightShown.current === key) return
     if (map.edges.some((e) => e.linkStatus === 'missing_logs')) {
@@ -142,7 +144,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       const t = setTimeout(() => setInsightPulse(false), 2600)
       return () => clearTimeout(t)
     }
-  }, [map, component, revCommit])
+  }, [map, component, revCommit, repoView])
 
   // the endpoint selected in the inspect panel resolves to its downstream sub-flow (from DeepWiki)
   const endpointFlow = useMemo(
@@ -245,9 +247,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       flowEdgesByOrigin.forEach((edges, origin) => {
         if (edges.has(edgeId)) originNames.push(nameOf(origin))
       })
-      // problem edges (amber missing-logs / red error-rate) get a Fix suggestion tab
+      // problem edges (amber missing-logs / red error-rate) get a Fix suggestion tab —
+      // but an undeployed commit has no observability, so there's nothing to diagnose
       let fix: EdgeFix | undefined
-      if (edge.linkStatus === 'missing_logs') {
+      if (!(repoView?.running ?? true)) {
+        fix = undefined
+      } else if (edge.linkStatus === 'missing_logs') {
         fix = { kind: 'missing_logs', sourceName: nameOf(src) }
       } else if (edge.linkStatus === 'silent') {
         fix = {
@@ -272,12 +277,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         }
       }
       const evidenceNote =
-        edge.linkStatus === 'healthy' && edge.logEvidence !== 'none'
+        (repoView?.running ?? true) && edge.linkStatus === 'healthy' && edge.logEvidence !== 'none'
           ? EVIDENCE_LABEL[edge.logEvidence].toLowerCase()
           : undefined
       setTraceCtx({ title: `${nameOf(src)} → ${nameOf(tgt)}`, restrictSources: originNames, fix, evidenceNote })
     },
-    [flowEdgesByOrigin, nameOf, edgeHealth, healthSettings],
+    [flowEdgesByOrigin, nameOf, edgeHealth, healthSettings, repoView],
   )
 
   // grey-body click on a non-root node: focus the live flow originating from it (toggles off)
@@ -382,7 +387,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             {
               id: 'act-enhance',
               group: 'Actions' as const,
-              label: 'Enhance logging',
+              label: 'Observability Fix',
               icon: 'sparkle' as const,
               run: () => setEnhanceComponent(center.name),
             },
@@ -494,6 +499,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             hiddenKinds={hiddenKinds}
             edgeHealth={edgeHealth}
             shimmerMissingUntil={shimmerUntil}
+            staticTopology={!running}
             onNodeInspect={(node) => {
               setModalTab('overview')
               setSelected(node)
@@ -550,7 +556,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             present={new Set(map.nodes.map((n) => n.kind))}
           />
           <ObservabilityMenu
-            coverage={map.coverage}
+            coverage={running ? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
             onTraces={() => setTraceCtx({ title: `${component} · all traces` })}
             onWiki={openWiki}
@@ -558,10 +564,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           <EdgeHealthSettings settings={healthSettings} onChange={setHealthSettings} />
         </div>
 
-        {/* missing links — the actual job, top-right */}
-        <div className="absolute right-4 top-4">
-          <MissingLinksPanel edges={map.edges} onFocus={focusEdge} pulse={insightPulse} />
-        </div>
+        {/* missing links — the actual job, top-right (hidden for undeployed commits: no data) */}
+        {running && (
+          <div className="absolute right-4 top-4">
+            <MissingLinksPanel edges={map.edges} onFocus={focusEdge} pulse={insightPulse} />
+          </div>
+        )}
 
         {selected && (
           <NodeModal
