@@ -134,26 +134,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     }
   }, [component, revCommit])
 
-  // insight moment: when the loaded map has logging gaps, draw the eye — once, softly
-  useEffect(() => {
-    if (!map || !(repoView?.running ?? true)) return
-    const key = `${component}@${revCommit ?? ''}`
-    if (insightShown.current === key) return
-    if (map.edges.some((e) => e.linkStatus === 'missing_logs')) {
-      insightShown.current = key
-      setShimmerUntil(performance.now() + 2600)
-      setInsightPulse(true)
-      const t = setTimeout(() => setInsightPulse(false), 2600)
-      return () => clearTimeout(t)
-    }
-  }, [map, component, revCommit, repoView])
-
   // the map only reaches maxDepth hops (undirected BFS) from the source repository — callers
-  // and callees both count as one hop, and an edge shows only when both ends are in reach
+  // and callees both count as one hop, and an edge shows only when both ends are in reach.
+  // Everything downstream (coverage, hazards, traces, blast radius…) consumes this view, so the
+  // whole UI stays in sync with the depth setting.
   const visible = useMemo(() => {
     if (!map) return null
     const center = map.nodes.find((n) => n.center)
-    if (!center) return { nodes: map.nodes, edges: map.edges }
+    if (!center) return { nodes: map.nodes, edges: map.edges, coverage: map.coverage }
     const adj = new Map<string, string[]>()
     for (const e of map.edges) {
       adj.set(e.source, [...(adj.get(e.source) ?? []), e.target])
@@ -176,11 +164,35 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     const keep = new Set(
       map.nodes.filter((n) => (depth.get(n.id) ?? Infinity) <= maxDepth).map((n) => n.id),
     )
+    const edges = map.edges.filter((e) => keep.has(e.source) && keep.has(e.target))
+    // coverage rescored over the links in view (same rule the backend uses)
+    const observed = edges.filter((e) => e.observed)
+    const logged = observed.filter((e) => e.linkStatus === 'healthy')
     return {
       nodes: map.nodes.filter((n) => keep.has(n.id)),
-      edges: map.edges.filter((e) => keep.has(e.source) && keep.has(e.target)),
+      edges,
+      coverage: {
+        loggedEdges: logged.length,
+        observedEdges: observed.length,
+        totalEdges: edges.length,
+        score: observed.length > 0 ? Math.round((100 * logged.length) / observed.length) : 100,
+      },
     }
   }, [map, maxDepth])
+
+  // insight moment: when the map in view has logging gaps, draw the eye — once, softly
+  useEffect(() => {
+    if (!visible || !(repoView?.running ?? true)) return
+    const key = `${component}@${revCommit ?? ''}`
+    if (insightShown.current === key) return
+    if (visible.edges.some((e) => e.linkStatus === 'missing_logs')) {
+      insightShown.current = key
+      setShimmerUntil(performance.now() + 2600)
+      setInsightPulse(true)
+      const t = setTimeout(() => setInsightPulse(false), 2600)
+      return () => clearTimeout(t)
+    }
+  }, [visible, component, revCommit, repoView])
 
   // the endpoint selected in the inspect panel resolves to its downstream sub-flow (from DeepWiki)
   const endpointFlow = useMemo(
@@ -347,13 +359,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   const showBlast = useCallback(
     (node: ComponentNode) => {
-      if (!map) return
-      const affected = blastRadius(node.id, map.edges)
+      if (!visible) return
+      // over the links in view, so the count always matches what the map shows
+      const affected = blastRadius(node.id, visible.edges)
       setFlowSource(null)
       setHighlight(affected)
       setBlast({ node: node.name, count: affected.size - 1 })
     },
-    [map],
+    [visible],
   )
 
   const clearHighlight = useCallback(() => {
@@ -427,7 +440,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
       // only offered when the map actually shows a logging gap leaving the root service,
       // so the enhancement popup can never contradict the graph
-      ...(center && map.edges.some((e) => e.linkStatus === 'missing_logs' && e.source === center.id)
+      ...(center && (visible?.edges ?? map.edges).some((e) => e.linkStatus === 'missing_logs' && e.source === center.id)
         ? [
             {
               id: 'act-enhance',
@@ -587,13 +600,15 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
         {/* filter chips + observability eye + health settings gear */}
         <div className="absolute bottom-4 left-4 flex items-end gap-2">
+          {/* kinds from the FULL map — a stable chip set, so the depth slider never
+              reflows this cluster (chips popping in/out shoved the gear popover around) */}
           <GraphLegend
             hiddenKinds={hiddenKinds}
             onToggle={toggleKind}
-            present={new Set((visible?.nodes ?? map.nodes).map((n) => n.kind))}
+            present={new Set(map.nodes.map((n) => n.kind))}
           />
           <ObservabilityMenu
-            coverage={running ? map.coverage : undefined}
+            coverage={running ? visible?.coverage ?? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
             onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
             onOverview={() => openRootModal('overview')}
@@ -618,7 +633,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             key={selected.id}
             component={component}
             node={selected}
-            edges={map.edges}
+            edges={visible?.edges ?? map.edges}
             running={running}
             initialTab={modalTab}
             onClose={() => setSelected(null)}
@@ -645,6 +660,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             title={traceCtx.title}
             initialSource={traceCtx.source}
             restrictSources={traceCtx.restrictSources}
+            visibleSources={visible?.nodes.map((n) => n.name)}
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
@@ -652,7 +668,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           />
         )}
 
-        {showTable && <CoverageTable map={map} onClose={() => setShowTable(false)} />}
+        {showTable && (
+          <CoverageTable
+            map={visible ? { ...map, ...visible } : map}
+            onClose={() => setShowTable(false)}
+          />
+        )}
         {syntheticTrace && (
           <SyntheticModal
             traceId={syntheticTrace.traceId}

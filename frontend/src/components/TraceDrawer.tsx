@@ -46,6 +46,8 @@ interface Props {
   evidenceNote?: string
   /** Restrict the list to these entry-service names (e.g. traces crossing a clicked edge). */
   restrictSources?: string[]
+  /** Services currently on the map (node-depth setting) — traces beginning elsewhere are out of view. */
+  visibleSources?: string[]
   onClose: () => void
   onSynthetic: (traceId: string) => void
 }
@@ -76,7 +78,7 @@ function timeAgo(iso: string): string {
   return `${Math.round(s / 86_400)}d ago`
 }
 
-export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, onClose, onSynthetic }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -115,12 +117,23 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
   }, [openId])
 
   // scope to the edge's flows when opened from a line click; otherwise all component traces
-  const scoped = useMemo(() => {
+  const restricted = useMemo(() => {
     if (!traces) return null
     if (!restrictSources) return traces
     const allow = new Set(restrictSources)
     return traces.filter((t) => allow.has(t.entryService))
   }, [traces, restrictSources])
+
+  // …then to traces beginning at a service that's actually on the map (node-depth setting)
+  const scoped = useMemo(() => {
+    if (!restricted) return null
+    if (!visibleSources) return restricted
+    const vis = new Set(visibleSources)
+    return restricted.filter((t) => vis.has(t.entryService))
+  }, [restricted, visibleSources])
+
+  // true when traces exist but every one of them begins beyond the current node depth
+  const depthHidesAll = scoped?.length === 0 && (restricted?.length ?? 0) > 0
 
   const sources = useMemo(() => {
     const set = new Set((scoped ?? []).map((t) => t.entryService))
@@ -272,11 +285,19 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState
-            icon="pulse"
-            title="No Traces Match These Filters"
-            message="Try widening the time range or clearing the source filter."
-          />
+          depthHidesAll ? (
+            <EmptyState
+              icon="pulse"
+              title="Traces Begin Beyond the Map"
+              message="Matching traces exist, but they all start at services outside the current node depth. Raise Nodes From Source in the map settings (gear) to bring them into view."
+            />
+          ) : (
+            <EmptyState
+              icon="pulse"
+              title="No Traces Match These Filters"
+              message="Try widening the time range or clearing the source filter."
+            />
+          )
         ) : (
           <ul>
             {filtered.map((t) => (
