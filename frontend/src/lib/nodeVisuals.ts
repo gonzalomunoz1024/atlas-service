@@ -47,11 +47,8 @@ export const EVIDENCE_LABEL: Record<LogEvidence, string> = {
 
 export const EDGE_KIND_LABEL: Record<EdgeKind, string> = {
   http: 'HTTP',
-  grpc: 'gRPC',
   kafka: 'Kafka',
-  db: 'SQL',
   mongo: 'Mongo',
-  cache: 'Cache',
 }
 
 /** Resolve a CSS custom property to its current value (respects light/dark). */

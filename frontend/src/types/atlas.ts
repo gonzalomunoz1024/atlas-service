@@ -5,7 +5,7 @@
 
 export type NodeKind = 'service' | 'queue' | 'database' | 'store' | 'cache' | 'external'
 export type Health = 'healthy' | 'degraded' | 'critical' | 'unknown'
-export type EdgeKind = 'http' | 'grpc' | 'kafka' | 'db' | 'mongo' | 'cache'
+export type EdgeKind = 'http' | 'kafka' | 'mongo'
 
 /** How a link behaves once topology is joined with observed traffic + logs. */
 export type LinkStatus = 'healthy' | 'missing_logs' | 'silent'
