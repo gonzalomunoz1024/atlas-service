@@ -64,11 +64,7 @@ export function SearchLanding({ onOpen }: { onOpen: (name: string) => void }) {
         <h1 className="animate-fade-in text-large-title font-semibold text-primary" style={reveal(1)}>
           Atlas
         </h1>
-        <p className="animate-fade-in mt-4 text-body text-secondary" style={reveal(2)}>
-          The map, the traffic, and the gaps between them.
-        </p>
-
-        <div className="animate-fade-in relative mt-10" style={reveal(3)}>
+        <div className="animate-fade-in relative mt-10" style={reveal(2)}>
           <div
             className={cx(
               'flex items-center gap-3 rounded-xl border bg-surface px-5 py-4 transition-all duration-[250ms]',
@@ -118,7 +114,11 @@ export function SearchLanding({ onOpen }: { onOpen: (name: string) => void }) {
           )}
         </div>
 
-        <p className="animate-fade-in mt-6 text-sm text-tertiary" style={reveal(4)}>
+        <p className="animate-fade-in mt-6 text-body text-secondary" style={reveal(3)}>
+          The map, the traffic, and the gaps between them.
+        </p>
+
+        <p className="animate-fade-in mt-3 text-sm text-tertiary" style={reveal(4)}>
           Try{' '}
           <button
             className="font-medium text-accent transition-opacity hover:opacity-70"
