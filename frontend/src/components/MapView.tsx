@@ -366,6 +366,10 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     setFlowSource(null)
     setHighlight(null)
     setBlast(null)
+    // clicking away from the root also dismisses the incoming split panel
+    setInspect(null)
+    setIncoming([])
+    setEndpointFilter('all')
   }, [])
 
   const toggleKind = useCallback((kind: NodeKind) => {
