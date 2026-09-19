@@ -644,6 +644,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             initialSource={traceCtx.source}
             restrictSources={traceCtx.restrictSources}
             visibleSources={map.nodes.map((n) => n.name)}
+            rootId={map.nodes.find((n) => n.center)?.id}
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}

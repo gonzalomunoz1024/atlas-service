@@ -21,7 +21,10 @@ public final class DepthScope {
     }
 
     public static HealthMap apply(HealthMap map, int maxDepth) {
-        ComponentNode center = map.nodes().stream().filter(ComponentNode::center).findFirst().orElse(null);
+        // center is a nullable Boolean (Jackson omits it on non-center nodes) — never unbox it
+        ComponentNode center = map.nodes().stream()
+                .filter(n -> Boolean.TRUE.equals(n.center()))
+                .findFirst().orElse(null);
         if (center == null) {
             return map;
         }
