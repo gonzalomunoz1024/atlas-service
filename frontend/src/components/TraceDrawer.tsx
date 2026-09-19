@@ -49,8 +49,8 @@ interface Props {
   /** Services currently on the map (node-depth setting) — traces beginning elsewhere are out of view. */
   visibleSources?: string[]
   onClose: () => void
-  onSynthetic: (traceId: string) => void
-  onAlerts: (traceId: string) => void
+  /** open the safeguard chooser (tests + observability as code) for a trace */
+  onSafeguards: (traceId: string) => void
 }
 
 // Splunk-style time range: each preset maps to an `earliest` time modifier sent with the
@@ -79,7 +79,7 @@ function timeAgo(iso: string): string {
   return `${Math.round(s / 86_400)}d ago`
 }
 
-export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, onClose, onSynthetic, onAlerts }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, onClose, onSafeguards }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -333,11 +333,11 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                     ) : (
                       <>
                         <TraceWaterfall detail={detail} />
-                        <div className="mt-4 flex gap-2">
-                          <Button variant="primary" onClick={() => onSynthetic(t.traceId)}>
-                            Create Testing Framework
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="primary" onClick={() => onSafeguards(t.traceId)}>
+                            <Icon name="shield" size={14} className="mr-1.5" />
+                            Add Safeguards
                           </Button>
-                          <Button onClick={() => onAlerts(t.traceId)}>Create Observability as Code</Button>
                         </div>
                       </>
                     )}

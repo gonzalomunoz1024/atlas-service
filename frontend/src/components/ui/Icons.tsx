@@ -25,8 +25,17 @@ export type IconName =
   | 'command'
   | 'ring'
   | 'eye'
+  | 'shield'
+  | 'gauge'
 
 const GLYPHS: Record<IconName, ReactNode> = {
+  shield: <path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6l7-3z" fill="none" strokeLinejoin="round" />,
+  gauge: (
+    <>
+      <path d="M5 17a8 8 0 1 1 14 0" fill="none" strokeLinecap="round" />
+      <path d="M12 13.5L15.5 9" strokeLinecap="round" />
+    </>
+  ),
   close: <path d="M6 6l12 12M18 6L6 18" />,
   'chevron-down': <path d="M5 9.5l7 7 7-7" />,
   'chevron-right': <path d="M9.5 5l7 7-7 7" />,

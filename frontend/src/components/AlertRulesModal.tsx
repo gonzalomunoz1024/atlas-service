@@ -3,7 +3,7 @@ import { api } from '../lib/api'
 import type { AlertPlan } from '../types/atlas'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
-import { Button, IconButton } from './ui/Button'
+import { IconButton } from './ui/Button'
 import { Skeleton } from './ui/Skeleton'
 import { CopyButton } from './CopyButton'
 import { cx } from '../lib/cx'
@@ -37,6 +37,17 @@ export function AlertRulesModal({ component, traceId, onClose }: Props) {
           <>
             <p className="text-sm text-secondary">{plan.summary}</p>
 
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-primary">Manifest</h3>
+                <CopyButton text={plan.manifestYaml} />
+              </div>
+              <pre className="max-h-64 overflow-auto rounded-md bg-surface-secondary p-4 font-mono text-caption leading-relaxed text-secondary">
+                {plan.manifestYaml}
+              </pre>
+            </div>
+
+            <h3 className="text-sm font-semibold text-primary">Rules Explained</h3>
             {plan.rules.map((r, i) => (
               <div key={i} className="rounded-md border border-stroke-light p-3">
                 <div className="flex items-center gap-2">
@@ -60,14 +71,10 @@ export function AlertRulesModal({ component, traceId, onClose }: Props) {
               </div>
             ))}
 
-            <Button
-              variant="primary"
-              className="w-full py-2.5 disabled:opacity-50"
-              disabled
-              title="Creates the rules through the Splunk/SPLOC alerting APIs — not available against mock data"
-            >
-              Create {plan.rules.length} Alert{plan.rules.length === 1 ? '' : 's'}
-            </Button>
+            <p className="rounded-md bg-surface-secondary p-3 text-center text-caption text-tertiary">
+              Copy the manifest into your repo — creating rules directly via the Splunk/SPLOC
+              alerting APIs isn’t available against mock data.
+            </p>
           </>
         )}
       </div>
@@ -79,9 +86,19 @@ function Header({ traceId }: { traceId: string }) {
   const close = useOverlayClose()
   return (
     <div className="flex items-center justify-between border-b border-stroke-light p-5">
-      <div>
-        <h2 className="text-title3 font-semibold text-primary">Observability as Code</h2>
-        <p className="font-mono text-sm text-secondary">{traceId}</p>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-tint text-accent">
+          <Icon name="doc" size={19} />
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-title3 font-semibold text-primary">Alert Manifest</h2>
+            <span className="rounded-sm bg-accent-tint px-2 py-0.5 text-caption font-semibold text-accent">
+              Observability as Code
+            </span>
+          </div>
+          <p className="font-mono text-caption text-secondary">{traceId}</p>
+        </div>
       </div>
       <IconButton label="Close" onClick={close}>
         <Icon name="close" size={18} />

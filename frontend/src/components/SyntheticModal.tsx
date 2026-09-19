@@ -30,7 +30,7 @@ export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', on
 
   return (
     <Modal onClose={onClose} raised width="max-w-2xl">
-      <Header />
+      <Header traceId={traceId} type={type} />
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {!test ? (
           <div className="space-y-3">
@@ -70,15 +70,23 @@ export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', on
   )
 }
 
-function Header() {
+function Header({ traceId, type }: { traceId: string; type: TestType }) {
   const close = useOverlayClose()
   return (
     <div className="flex items-center justify-between border-b border-stroke-light p-5">
-      <div className="flex items-center gap-2">
-        <span className="rounded-sm bg-accent-tint px-2 py-1 text-caption font-semibold text-accent">
-          HyperExecute
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-tint text-accent">
+          <Icon name="pulse" size={19} />
         </span>
-        <h2 className="text-title3 font-semibold text-primary">Testing Framework</h2>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-title3 font-semibold text-primary">{TEST_TYPE_LABEL[type]}</h2>
+            <span className="rounded-sm bg-accent-tint px-2 py-0.5 text-caption font-semibold text-accent">
+              HyperExecute
+            </span>
+          </div>
+          <p className="font-mono text-caption text-secondary">{traceId}</p>
+        </div>
       </div>
       <IconButton label="Close" onClick={close}>
         <Icon name="close" size={18} />

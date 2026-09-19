@@ -82,6 +82,8 @@ export interface AlertRule {
 export interface AlertPlan {
   traceId: string
   summary: string
+  /** the observability-as-code manifest declaring the rules — the reviewable artifact */
+  manifestYaml: string
   rules: AlertRule[]
 }
 

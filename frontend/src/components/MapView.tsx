@@ -18,6 +18,7 @@ import { CoverageTable } from './CoverageTable'
 import { TraceDrawer, type EdgeFix } from './TraceDrawer'
 import { SyntheticModal } from './SyntheticModal'
 import { AlertRulesModal } from './AlertRulesModal'
+import { SafeguardsModal } from './SafeguardsModal'
 import { EnhancementDrawer } from './EnhancementDrawer'
 import { CommandPalette, useCommandK, type PaletteCommand } from './CommandPalette'
 import { ObservabilityMenu } from './ObservabilityMenu'
@@ -55,6 +56,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [alertTrace, setAlertTrace] = useState<string | null>(null)
+  const [safeguardTrace, setSafeguardTrace] = useState<string | null>(null)
   const [enhanceComponent, setEnhanceComponent] = useState<string | null>(null)
   const graphRef = useRef<GraphHandle>(null)
 
@@ -645,8 +647,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
-            onSynthetic={(traceId) => setSyntheticTrace({ traceId })}
-            onAlerts={setAlertTrace}
+            onSafeguards={setSafeguardTrace}
           />
         )}
 
@@ -656,6 +657,19 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onClose={() => setShowTable(false)}
           />
         )}
+        {safeguardTrace && (
+          <SafeguardsModal
+            traceId={safeguardTrace}
+            onPick={(kind) => {
+              const traceId = safeguardTrace
+              setSafeguardTrace(null)
+              if (kind === 'synthetic') setSyntheticTrace({ traceId })
+              else setAlertTrace(traceId)
+            }}
+            onClose={() => setSafeguardTrace(null)}
+          />
+        )}
+
         {alertTrace && (
           <AlertRulesModal component={component} traceId={alertTrace} onClose={() => setAlertTrace(null)} />
         )}
