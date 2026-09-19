@@ -50,6 +50,8 @@ interface Props {
   visibleSources?: string[]
   /** the map's center (root) node id — safeguards only apply to traces that invoke it */
   rootId?: string
+  /** whether this drawer's context (root view / root-touching edge) offers safeguards at all */
+  safeguardsEnabled?: boolean
   onClose: () => void
   /** open the safeguard chooser (tests + observability as code) for a trace */
   onSafeguards: (traceId: string) => void
@@ -81,7 +83,7 @@ function timeAgo(iso: string): string {
   return `${Math.round(s / 86_400)}d ago`
 }
 
-export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, rootId, onClose, onSafeguards }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, rootId, safeguardsEnabled = false, onClose, onSafeguards }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -336,7 +338,7 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                       <>
                         <TraceWaterfall detail={detail} />
                         {/* safeguards protect the root service — only traces that invoke it qualify */}
-                        {(!rootId || detail.spans.some((sp) => sp.nodeId === rootId)) && (
+                        {safeguardsEnabled && (!rootId || detail.spans.some((sp) => sp.nodeId === rootId)) && (
                           <div className="mt-4 flex justify-end">
                             <Button variant="primary" onClick={() => onSafeguards(t.traceId)}>
                               <Icon name="shield" size={14} className="mr-1.5" />

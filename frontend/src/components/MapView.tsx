@@ -52,7 +52,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [endpointFilter, setEndpointFilter] = useState<string>('all')
   const [showTable, setShowTable] = useState(false)
   const [hiddenKinds, setHiddenKinds] = useState<Set<NodeKind>>(new Set())
-  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string } | null>(null)
+  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string; safeguards?: boolean } | null>(null)
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string; fromChooser?: boolean } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [alertTrace, setAlertTrace] = useState<string | null>(null)
@@ -307,7 +307,15 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         (repoView?.running ?? true) && edge.linkStatus === 'healthy' && edge.logEvidence !== 'none'
           ? EVIDENCE_LABEL[edge.logEvidence].toLowerCase()
           : undefined
-      setTraceCtx({ title: `${nameOf(src)} → ${nameOf(tgt)}`, restrictSources: originNames, fix, evidenceNote })
+      // safeguards protect the root — only offer them when this edge invokes (or is) the root
+      const center = map?.nodes.find((n) => n.center)?.id
+      setTraceCtx({
+        title: `${nameOf(src)} → ${nameOf(tgt)}`,
+        restrictSources: originNames,
+        fix,
+        evidenceNote,
+        safeguards: src === center || tgt === center,
+      })
     },
     [flowEdgesByOrigin, nameOf, edgeRates, healthSettings, repoView],
   )
@@ -399,7 +407,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
               group: 'Actions' as const,
               label: 'Open Traces',
               icon: 'pulse' as const,
-              run: () => setTraceCtx({ title: `${component} · all traces` }),
+              run: () => setTraceCtx({ title: `${component} · all traces`, safeguards: true }),
             },
             {
               id: 'act-coverage',
@@ -592,7 +600,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           <ObservabilityMenu
             coverage={running ? map.coverage : undefined}
             onCoverage={() => setShowTable(true)}
-            onTraces={running ? () => setTraceCtx({ title: `${component} · all traces` }) : undefined}
+            onTraces={running ? () => setTraceCtx({ title: `${component} · all traces`, safeguards: true }) : undefined}
             onOverview={() => openRootModal('overview')}
           />
           <EdgeHealthSettings
@@ -621,7 +629,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             initialTab={modalTab}
             onClose={() => setSelected(null)}
             onViewTraces={() => {
-              setTraceCtx({ title: `${selected.name} · traces` })
+              setTraceCtx({ title: `${selected.name} · traces`, safeguards: !!selected.center })
               setSelected(null)
             }}
             onEnhance={() => {
@@ -645,6 +653,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             restrictSources={traceCtx.restrictSources}
             visibleSources={map.nodes.map((n) => n.name)}
             rootId={map.nodes.find((n) => n.center)?.id}
+            safeguardsEnabled={traceCtx.safeguards ?? false}
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
