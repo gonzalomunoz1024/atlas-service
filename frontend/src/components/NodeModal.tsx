@@ -39,13 +39,13 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
     api.nodeOpenApi(component, node.id).then(setSpec).catch(() => setSpec([]))
   }, [component, node.id])
 
-  // apps run on OCP clusters; only they get the Deployment tab
+  // apps run on OCP clusters; only they get the Deployment tab (and the Overview summary)
   const isApp = node.kind === 'service' || node.kind === 'external'
   useEffect(() => {
-    if (tab === 'deploy' && !deployments) {
+    if (isApp) {
       api.nodeDeployments(component, node.id).then(setDeployments).catch(() => setDeployments([]))
     }
-  }, [tab, deployments, component, node.id])
+  }, [isApp, component, node.id])
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id)
   const missingLog = running && related.some((e) => e.linkStatus === 'missing_logs')
@@ -139,6 +139,33 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
                 ))}
               </ul>
             </div>
+
+            {isApp && deployments && deployments.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-primary">Deployed On</h3>
+                <div className="flex flex-wrap gap-2">
+                  {deployments.map((d, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setTab('deploy')}
+                      title={`${d.region} · ${d.namespace} · ${d.replicas} replicas`}
+                      className="flex items-center gap-1.5 rounded-full border border-stroke-light px-2.5 py-1 text-caption transition-colors hover:bg-surface-secondary"
+                    >
+                      <span className="font-mono font-semibold text-primary">{d.cluster}</span>
+                      <span
+                        className={cx(
+                          'uppercase',
+                          d.env === 'prod' ? 'font-medium text-accent' : 'text-tertiary',
+                        )}
+                      >
+                        {d.env}
+                      </span>
+                      <span className="tabular-nums text-tertiary">×{d.replicas}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2 pt-1">
               {running && (
