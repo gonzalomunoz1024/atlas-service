@@ -10,7 +10,7 @@ import { StatusDot } from './ui/StatusDot'
 import { Skeleton } from './ui/Skeleton'
 import { EmptyState } from './ui/EmptyState'
 import { DiffBlock, EnhancementContent } from './EnhancementContent'
-import { CopyButton } from './CopyButton'
+import { CopyButton, CopyIconButton } from './CopyButton'
 import { cx } from '../lib/cx'
 
 /** Context for the "Fix suggestion" tab when the drawer was opened from a problem edge. */
@@ -330,7 +330,7 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                       <span className="text-[10px] tabular-nums text-tertiary">{timeAgo(t.startedAt)}</span>
                     </span>
                   </button>
-                  <CopyTraceId traceId={t.traceId} />
+                  <CopyIconButton text={t.traceId} label="Copy trace ID" />
                 </div>
 
                 {openId === t.traceId && (
@@ -531,20 +531,3 @@ function SilentEdgeEvidence({
   )
 }
 
-/** Quiet per-row copy affordance for the trace id (flashes a check on copy). */
-function CopyTraceId({ traceId }: { traceId: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <IconButton
-      label="Copy trace ID"
-      className="h-7 w-7 shrink-0"
-      onClick={() => {
-        navigator.clipboard?.writeText(traceId)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1400)
-      }}
-    >
-      <Icon name={copied ? 'check' : 'copy'} size={13} className={copied ? 'text-healthy' : 'text-tertiary'} />
-    </IconButton>
-  )
-}

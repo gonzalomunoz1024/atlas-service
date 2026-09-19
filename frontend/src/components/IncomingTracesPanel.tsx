@@ -4,6 +4,7 @@ import { Icon } from './ui/Icons'
 import { IconButton } from './ui/Button'
 import { Select } from './ui/Select'
 import { StatusDot } from './ui/StatusDot'
+import { CopyIconButton } from './CopyButton'
 import { EmptyState } from './ui/EmptyState'
 
 export interface IncomingTrace {
@@ -97,25 +98,28 @@ export function IncomingTracesPanel({ nodeName, endpoints: known, traces, onClos
           <ul>
             {shown.map((t) => (
               <li key={t.key}>
-                <button
-                  onClick={() => onSelect?.(t)}
-                  className="flex w-full items-center gap-3 border-b border-stroke-light px-4 py-2.5 text-left transition-colors hover:bg-surface-secondary animate-fade-in"
-                >
-                  <StatusDot kind={t.status === 'error' ? 'error' : 'ok'} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-mono text-caption text-primary">{t.endpoint ?? '—'}</span>
-                    <span className="flex items-center gap-1.5 truncate text-[10px] text-tertiary">
-                      <span className="font-mono">{t.traceId}</span>
-                      {t.origin && (
-                        <>
-                          <span>·</span>
-                          <span>from {t.origin}</span>
-                        </>
-                      )}
+                <div className="flex w-full items-center gap-1 border-b border-stroke-light pr-3 transition-colors hover:bg-surface-secondary animate-fade-in">
+                  <button
+                    onClick={() => onSelect?.(t)}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left"
+                  >
+                    <StatusDot kind={t.status === 'error' ? 'error' : 'ok'} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate font-mono text-caption text-primary">{t.endpoint ?? '—'}</span>
+                      <span className="flex items-center gap-1.5 truncate text-[10px] text-tertiary">
+                        <span className="font-mono">{t.traceId}</span>
+                        {t.origin && (
+                          <>
+                            <span>·</span>
+                            <span>from {t.origin}</span>
+                          </>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="ml-auto shrink-0 text-caption tabular-nums text-tertiary">{t.latencyMs}ms</span>
-                </button>
+                    <span className="ml-auto shrink-0 text-caption tabular-nums text-tertiary">{t.latencyMs}ms</span>
+                  </button>
+                  <CopyIconButton text={t.traceId} label="Copy trace ID" />
+                </div>
               </li>
             ))}
           </ul>
