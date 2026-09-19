@@ -53,7 +53,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [showTable, setShowTable] = useState(false)
   const [hiddenKinds, setHiddenKinds] = useState<Set<NodeKind>>(new Set())
   const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string } | null>(null)
-  const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string } | null>(null)
+  const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string; fromChooser?: boolean } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [alertTrace, setAlertTrace] = useState<string | null>(null)
   const [safeguardTrace, setSafeguardTrace] = useState<string | null>(null)
@@ -663,7 +663,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onPick={(kind) => {
               const traceId = safeguardTrace
               setSafeguardTrace(null)
-              if (kind === 'synthetic') setSyntheticTrace({ traceId })
+              if (kind === 'synthetic') setSyntheticTrace({ traceId, fromChooser: true })
               else setAlertTrace(traceId)
             }}
             onClose={() => setSafeguardTrace(null)}
@@ -671,7 +671,15 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         )}
 
         {alertTrace && (
-          <AlertRulesModal component={component} traceId={alertTrace} onClose={() => setAlertTrace(null)} />
+          <AlertRulesModal
+            component={component}
+            traceId={alertTrace}
+            onBack={() => {
+              setSafeguardTrace(alertTrace)
+              setAlertTrace(null)
+            }}
+            onClose={() => setAlertTrace(null)}
+          />
         )}
 
         {syntheticTrace && (
@@ -679,6 +687,14 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             traceId={syntheticTrace.traceId}
             node={syntheticTrace.node}
             endpoint={syntheticTrace.endpoint}
+            onBack={
+              syntheticTrace.fromChooser
+                ? () => {
+                    setSafeguardTrace(syntheticTrace.traceId)
+                    setSyntheticTrace(null)
+                  }
+                : undefined
+            }
             onClose={() => setSyntheticTrace(null)}
           />
         )}

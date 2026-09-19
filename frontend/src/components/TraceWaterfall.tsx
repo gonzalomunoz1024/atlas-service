@@ -17,8 +17,9 @@ export function TraceWaterfall({ detail }: { detail: TraceDetail }) {
 
 function SpanRow({ span, total }: { span: Span; total: number }) {
   const [open, setOpen] = useState(false)
-  const left = (span.startOffsetMs / total) * 100
-  const width = Math.max(1.5, (span.durationMs / total) * 100)
+  const left = Math.min(98.5, (span.startOffsetMs / total) * 100)
+  // clamp to the track so long, late-starting spans never spill into the ms column
+  const width = Math.min(100 - left, Math.max(1.5, (span.durationMs / total) * 100))
   return (
     <div>
       <button
@@ -28,7 +29,7 @@ function SpanRow({ span, total }: { span: Span; total: number }) {
         <span className="w-32 shrink-0 truncate text-right font-mono text-caption2 text-secondary">
           {span.service}
         </span>
-        <span className="relative h-4 flex-1 rounded-[4px] bg-surface-secondary">
+        <span className="relative h-4 flex-1 overflow-hidden rounded-[4px] bg-surface-secondary">
           <span
             className={cx(
               'absolute top-0 h-4 rounded-[4px] opacity-85',

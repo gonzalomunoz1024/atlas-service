@@ -18,10 +18,12 @@ interface Props {
   endpoint?: string
   /** which kind of test to generate — synthetic today, more kinds later */
   type?: TestType
+  /** present when opened from the safeguard chooser — returns to it */
+  onBack?: () => void
   onClose: () => void
 }
 
-export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', onClose }: Props) {
+export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', onBack, onClose }: Props) {
   const [test, setTest] = useState<GeneratedTest | null>(null)
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', on
 
   return (
     <Modal onClose={onClose} raised width="max-w-2xl">
-      <Header traceId={traceId} type={type} />
+      <Header traceId={traceId} type={type} onBack={onBack} />
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {!test ? (
           <div className="space-y-3">
@@ -70,11 +72,16 @@ export function SyntheticModal({ traceId, node, endpoint, type = 'synthetic', on
   )
 }
 
-function Header({ traceId, type }: { traceId: string; type: TestType }) {
+function Header({ traceId, type, onBack }: { traceId: string; type: TestType; onBack?: () => void }) {
   const close = useOverlayClose()
   return (
     <div className="flex items-center justify-between border-b border-stroke-light p-5">
       <div className="flex items-center gap-3">
+        {onBack && (
+          <IconButton label="Back to safeguards" onClick={onBack} className="-ml-1.5">
+            <Icon name="chevron-right" size={16} className="rotate-180" />
+          </IconButton>
+        )}
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-tint text-accent">
           <Icon name="pulse" size={19} />
         </span>

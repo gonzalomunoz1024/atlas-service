@@ -11,11 +11,13 @@ import { cx } from '../lib/cx'
 interface Props {
   component: string
   traceId: string
+  /** present when opened from the safeguard chooser — returns to it */
+  onBack?: () => void
   onClose: () => void
 }
 
 /** Alert rules for Splunk/SPLOC derived from a trace's call path (opens over the trace drawer). */
-export function AlertRulesModal({ component, traceId, onClose }: Props) {
+export function AlertRulesModal({ component, traceId, onBack, onClose }: Props) {
   const [plan, setPlan] = useState<AlertPlan | null>(null)
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export function AlertRulesModal({ component, traceId, onClose }: Props) {
 
   return (
     <Modal onClose={onClose} raised width="max-w-2xl">
-      <Header traceId={traceId} />
+      <Header traceId={traceId} onBack={onBack} />
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
         {!plan ? (
@@ -82,11 +84,16 @@ export function AlertRulesModal({ component, traceId, onClose }: Props) {
   )
 }
 
-function Header({ traceId }: { traceId: string }) {
+function Header({ traceId, onBack }: { traceId: string; onBack?: () => void }) {
   const close = useOverlayClose()
   return (
     <div className="flex items-center justify-between border-b border-stroke-light p-5">
       <div className="flex items-center gap-3">
+        {onBack && (
+          <IconButton label="Back to safeguards" onClick={onBack} className="-ml-1.5">
+            <Icon name="chevron-right" size={16} className="rotate-180" />
+          </IconButton>
+        )}
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-tint text-accent">
           <Icon name="doc" size={19} />
         </span>
