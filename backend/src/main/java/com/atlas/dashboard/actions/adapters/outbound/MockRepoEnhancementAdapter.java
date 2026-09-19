@@ -42,7 +42,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                 return new EnhancementPlan(
                         component,
                         owned,
-                        "No logging gaps detected — every live call edge leaving " + component
+                        "No logging gaps detected. Every live call edge leaving " + component
                                 + " already lands in Splunk.",
                         List.of("All observed outbound edges have correlated log events."),
                         "",
@@ -54,7 +54,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
             // caller-side logs alone can never prove the receiver saw the call.
             String receiver = gapIds.get(0);
             String diff = String.join("\n",
-                    "# caller — github.com/acme/" + slug,
+                    "# caller · github.com/acme/" + slug,
                     "--- a/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
                     "+++ b/src/main/java/com/acme/" + slug + "/OpaPolicyClient.java",
                     "@@ propagate the trace id in the request headers and log the round trip",
@@ -70,7 +70,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                     "+        .doOnNext(d -> log.info(\"opa.decide.response traceId={} allow={}\", tracer.currentTraceId(), d.allow()));",
                     " }",
                     "",
-                    "# receiver — github.com/acme/" + receiver,
+                    "# receiver · github.com/acme/" + receiver,
                     "--- a/src/main/java/com/acme/" + receiver + "/TraceLogFilter.java",
                     "+++ b/src/main/java/com/acme/" + receiver + "/TraceLogFilter.java",
                     "@@ log the propagated trace id on every arriving request",
@@ -92,7 +92,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                             "DeepWiki shows a live call edge to " + String.join(", ", gapTargets)
                                     + ", but Splunk has zero correlated log events for it.",
                             "Carrying the trace id in the headers (W3C traceparent) and logging it on both "
-                                    + "the caller and the receiver makes every call correlate in Splunk — the "
+                                    + "the caller and the receiver makes every call correlate in Splunk. That is the "
                                     + "same evidence Atlas uses to mark a link healthy.",
                             "Once both sides log the id, this edge flips from amber to a solid grey hairline."),
                     diff,
@@ -111,7 +111,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
             String targetName = targetSpec != null ? targetSpec.name() : target;
             boolean owned = fixture.isOwned(slug);
             String diff = String.join("\n",
-                    "# caller — github.com/acme/" + slug,
+                    "# caller · github.com/acme/" + slug,
                     "--- a/src/main/java/com/acme/" + slug + "/DownstreamClient.java",
                     "+++ b/src/main/java/com/acme/" + slug + "/DownstreamClient.java",
                     "@@ bound the failure: retry transient errors, cap the wait",

@@ -233,7 +233,7 @@ public class TopologyFixture {
                     "GET /v1/health", new EndpointDoc("Liveness/readiness probe.", null)),
             "opa-pod", Map.of(
                     "POST /v1/data", new EndpointDoc(
-                            "OPA data API — evaluate the guardrails/allow rule.",
+                            "OPA data API: evaluate the guardrails/allow rule.",
                             "{\n  \"input\": { \"subject\": \"vmforge-deploy-7f3\", \"action\": \"deploy\","
                                     + " \"resource\": \"cluster/prod-eu1\" }\n}")),
             "opa-sandbox", Map.of(

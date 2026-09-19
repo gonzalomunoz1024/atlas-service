@@ -98,7 +98,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               </div>
             ) : (
               <div className="rounded-md bg-surface-secondary p-3 text-sm text-secondary">
-                This commit isn’t deployed — no live metrics, traces, or logging data exist for it.
+                This commit isn’t deployed, so no live metrics, traces, or logging data exist for it.
                 Showing repository knowledge only.
               </div>
             )}
@@ -183,7 +183,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
         {tab === 'deploy' && (
           <div className="space-y-4">
             <p className="text-caption text-tertiary">
-              OpenShift placements from the cluster inventory — where this application runs, per
+              OpenShift placements from the cluster inventory: where this application runs, per
               environment.
             </p>
             {!deployments ? (
@@ -239,7 +239,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
         {tab === 'api' && spec && (
           <div className="space-y-4">
             <p className="text-caption text-tertiary">
-              Extracted by DeepWiki from the repository’s OpenAPI spec — request examples power
+              Extracted by DeepWiki from the repository’s OpenAPI spec. Request examples power
               synthetic-transaction payloads.
             </p>
             {spec.map((op) => (

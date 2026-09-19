@@ -82,7 +82,7 @@ export function IncomingTracesPanel({ nodeName, endpoints: known, traces, onClos
         {endpoint !== 'all' && (
           <p className="mt-1.5 flex items-start gap-1.5 text-caption2 text-tertiary animate-fade-in">
             <Icon name="eye" size={12} className="mt-px shrink-0 text-accent" />
-            The map now shows only this endpoint’s flow — who calls it and what it triggers downstream.
+            The map now shows only this endpoint’s flow: who calls it and what it triggers downstream.
           </p>
         )}
       </div>

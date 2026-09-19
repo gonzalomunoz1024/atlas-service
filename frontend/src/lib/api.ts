@@ -23,13 +23,13 @@ const revQuery = (rev?: string) => (rev ? `?rev=${encodeURIComponent(rev)}` : ''
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} (${url})`)
   return (await res.json()) as T
 }
 
 async function post<T>(url: string): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} (${url})`)
   return (await res.json()) as T
 }
 

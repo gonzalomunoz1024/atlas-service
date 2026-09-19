@@ -74,7 +74,7 @@ export function CoverageTable({ map, onClose }: { map: HealthMap; onClose: () =>
           <EmptyState
             icon="ring"
             title="No Links From This Source"
-            message="This service originates no mapped links — clear the source filter to see all links."
+            message="This service originates no mapped links. Clear the source filter to see all links."
           />
         ) : (
         <table className="w-full border-collapse text-sm">
@@ -138,7 +138,7 @@ function TableHeader({ coverage, filter }: { coverage: HealthMap['coverage']; fi
       <div>
         <h2 className="text-title3 font-semibold text-primary">Logging Coverage</h2>
         <p className="mt-1 text-sm text-secondary">
-          <span className="font-semibold tabular-nums text-primary">{coverage.score}%</span> —{' '}
+          <span className="font-semibold tabular-nums text-primary">{coverage.score}%</span> ·{' '}
           {coverage.loggedEdges} of {coverage.observedEdges} live links reach Splunk
           {coverage.observedEdges < coverage.totalEdges && (
             <> · {coverage.totalEdges - coverage.observedEdges} mapped link(s) show no traffic</>

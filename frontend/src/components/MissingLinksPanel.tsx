@@ -62,7 +62,7 @@ export function MissingLinksPanel({ edges, onFocus, pulse }: Props) {
             <div>
               <span className="text-sm font-semibold text-primary">Missing Links</span>
               <p className="mt-0.5 text-caption2 text-tertiary">
-                Traffic is flowing — but no logs land in Splunk
+                Traffic is flowing, but no logs land in Splunk
               </p>
             </div>
             <IconButton label="Collapse" onClick={close} className="h-7 w-7">

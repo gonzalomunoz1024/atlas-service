@@ -69,7 +69,7 @@ export function EnhancementContent({ component }: { component: string }) {
         variant="primary"
         className="w-full py-2.5 disabled:opacity-50"
         disabled
-        title="Opens the PR through your git provider — not available against mock data"
+        title="Opens the PR through your git provider. Not available against mock data"
       >
         Open Pull Request
       </Button>

@@ -77,7 +77,7 @@ export function EdgeHealthSettings({ settings, onChange, maxDepth, onMaxDepth, o
             <>
               <p className="mt-2 text-caption text-tertiary">
                 Links turn <span className="text-critical">red</span> when the error rate exceeds the
-                threshold — otherwise they stay neutral.
+                threshold. Otherwise they stay neutral.
               </p>
 
               <label className="mt-4 flex items-center justify-between text-caption text-secondary">

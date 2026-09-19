@@ -29,7 +29,7 @@ const TESTING: Card[] = [
   {
     icon: 'flask',
     title: 'Regression Test',
-    description: 'Pin today’s behaviour — fail the build the moment this path drifts.',
+    description: 'Pin today’s behaviour and fail the build the moment this path drifts.',
     soon: true,
   },
   {
@@ -50,7 +50,7 @@ const OBSERVABILITY: Card[] = [
 ]
 
 /**
- * The safeguard chooser: one trace becomes lasting protection — tests that replay it,
+ * The safeguard chooser: one trace becomes lasting protection: tests that replay it,
  * alerts that watch it. Picking an available card opens that artifact's generator.
  */
 export function SafeguardsModal({ traceId, onPick, onClose }: Props) {
@@ -59,7 +59,7 @@ export function SafeguardsModal({ traceId, onPick, onClose }: Props) {
       <Header traceId={traceId} />
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">
         <p className="text-sm leading-relaxed text-secondary">
-          Turn this trace into lasting protection — tests that replay this exact call path, and
+          Turn this trace into lasting protection: tests that replay this exact call path, and
           alerts that watch it in production.
         </p>
 

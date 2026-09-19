@@ -52,7 +52,7 @@ public class MockAlertingAdapter implements AlertingPort {
                     "Error spike: " + slug,
                     "index=prod service=\"" + slug + "\" level=ERROR earliest=-15m"
                             + " | timechart span=5m count | where count > 25",
-                    "Errors on the service this trace flows through — page before callers notice."));
+                    "Errors on the service this trace flows through. Page before callers notice."));
 
             observed.stream()
                     .max(Comparator.comparingInt(EdgeObservation::p95LatencyMs))
@@ -62,11 +62,11 @@ public class MockAlertingAdapter implements AlertingPort {
                             "p95(span.duration{edge=\"" + slowest.edgeId() + "\"}) > "
                                     + slowest.p95LatencyMs() * 2 + "ms for 10m",
                             "The slowest hop on this path runs at p95 " + slowest.p95LatencyMs()
-                                    + "ms — alert at 2× before it degrades the whole trace.")));
+                                    + "ms. Alert at 2× before it degrades the whole trace.")));
 
             return new AlertPlan(
                     traceId,
-                    rules.size() + " alert rules derived from " + traceId + "'s call path — "
+                    rules.size() + " alert rules derived from " + traceId + "'s call path: "
                             + "logging-gap regression, error spike, and a latency guard.",
                     manifest(traceId, slug, rules),
                     List.copyOf(rules));

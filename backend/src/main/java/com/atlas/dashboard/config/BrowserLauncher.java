@@ -30,7 +30,7 @@ public class BrowserLauncher implements ApplicationListener<ApplicationReadyEven
             }
             log.info("desktop mode: opened {}", url);
         } catch (Exception e) {
-            log.warn("desktop mode: could not open browser — visit {} manually", url, e);
+            log.warn("desktop mode: could not open browser; visit {} manually", url, e);
         }
     }
 }

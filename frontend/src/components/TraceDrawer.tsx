@@ -166,14 +166,14 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
         <EmptyState
           icon="pulse"
           title="No Traces for This Commit"
-          message="This commit isn’t deployed anywhere, so no traffic — and no traces — exist for it."
+          message="This commit isn’t deployed anywhere, so no traffic and no traces exist for it."
         />
       ) : (
         <>
       {evidenceNote && (
         <p className="flex items-center gap-1.5 border-b border-stroke-light px-5 py-2 text-caption text-tertiary">
           <Icon name="check" size={12} className="shrink-0 text-healthy" />
-          Logged &amp; flowing — {evidenceNote}
+          Logged &amp; flowing · {evidenceNote}
         </p>
       )}
 
@@ -382,7 +382,7 @@ function ErrorRateFix({ fix }: { fix: Extract<EdgeFix, { kind: 'error_rate' }> }
     <div className="space-y-5">
       <div className="rounded-md border border-critical/30 bg-critical-tint p-3 text-sm">
         <p className="font-medium text-critical">
-          Error rate {fix.ratePct.toFixed(1)}% over the last {fix.windowMin} min — threshold is {fix.thresholdPct}%
+          Error rate {fix.ratePct.toFixed(1)}% over the last {fix.windowMin} min. The threshold is {fix.thresholdPct}%
         </p>
         <p className="mt-1 text-secondary">
           Measured from live traffic on {fix.sourceName} → {fix.targetName}. Adjust the threshold and
@@ -470,7 +470,7 @@ function SilentEdgeEvidence({
         <p className="font-medium text-primary">Mapped, but No Traffic Observed</p>
         <p className="mt-1 text-secondary">
           DeepWiki documents this dependency, yet SPLOC recorded zero calls across it in the live
-          window — either the calls aren’t instrumented, or the code path is stale.
+          window. Either the calls aren’t instrumented, or the code path is stale.
         </p>
       </div>
 
@@ -503,7 +503,7 @@ function SilentEdgeEvidence({
           <li className="flex gap-2">
             <span className="text-accent">•</span>
             <span>
-              <span className="font-medium text-primary">Observability gap</span> — the calls happen,
+              <span className="font-medium text-primary">Observability gap</span>: the calls happen,
               but {fix.sourceName} isn’t propagating trace context on this path, so SPLOC never sees
               them.
             </span>
@@ -511,7 +511,7 @@ function SilentEdgeEvidence({
           <li className="flex gap-2">
             <span className="text-accent">•</span>
             <span>
-              <span className="font-medium text-primary">Stale code</span> — the dependency exists in
+              <span className="font-medium text-primary">Stale code</span>: the dependency exists in
               the repository but the path is never exercised anymore; the code (and the coupling) may
               be removable.
             </span>
@@ -523,7 +523,7 @@ function SilentEdgeEvidence({
         <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Next Steps</h3>
         <ul className="space-y-1.5 text-sm text-secondary">
           <li className="flex gap-2"><span className="text-accent">•</span>Verify tracing instrumentation on {fix.sourceName}’s outbound {fix.edgeKindLabel} client.</li>
-          <li className="flex gap-2"><span className="text-accent">•</span>Run a synthetic through the path — if it appears on the map, it was an instrumentation gap.</li>
+          <li className="flex gap-2"><span className="text-accent">•</span>Run a synthetic through the path. If it appears on the map, it was an instrumentation gap.</li>
           <li className="flex gap-2"><span className="text-accent">•</span>If genuinely unused, remove the dependency and let the next DeepWiki run clear the edge.</li>
         </ul>
       </div>

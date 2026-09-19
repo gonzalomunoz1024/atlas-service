@@ -517,7 +517,7 @@ const ENDPOINT_DOCS: Record<string, Record<string, { summary: string; body: stri
   },
   'opa-pod': {
     'POST /v1/data': {
-      summary: 'OPA data API — evaluate the guardrails/allow rule.',
+      summary: 'OPA data API: evaluate the guardrails/allow rule.',
       body: '{\n  "input": { "subject": "vmforge-deploy-7f3", "action": "deploy", "resource": "cluster/prod-eu1" }\n}',
     },
   },
@@ -662,7 +662,7 @@ function buildEnhancement(component: string): EnhancementPlan {
     return {
       component,
       owned,
-      summary: `No logging gaps detected — every live call edge leaving ${component} already lands in Splunk.`,
+      summary: `No logging gaps detected. Every live call edge leaving ${component} already lands in Splunk.`,
       rationale: ['All observed outbound edges have correlated log events.'],
       diff: '',
       suggestedAlerts: [],
@@ -675,7 +675,7 @@ function buildEnhancement(component: string): EnhancementPlan {
   // logs alone can never prove the receiver saw the call.
   const receiver = gapIds[0]
   const diff = [
-    `# caller — github.com/acme/${s}`,
+    `# caller · github.com/acme/${s}`,
     `--- a/src/main/java/com/acme/${s}/OpaPolicyClient.java`,
     `+++ b/src/main/java/com/acme/${s}/OpaPolicyClient.java`,
     '@@ propagate the trace id in the request headers and log the round trip',
@@ -691,7 +691,7 @@ function buildEnhancement(component: string): EnhancementPlan {
     '+        .doOnNext(d -> log.info("opa.decide.response traceId={} allow={}", tracer.currentTraceId(), d.allow()));',
     ' }',
     '',
-    `# receiver — github.com/acme/${receiver}`,
+    `# receiver · github.com/acme/${receiver}`,
     `--- a/src/main/java/com/acme/${receiver}/TraceLogFilter.java`,
     `+++ b/src/main/java/com/acme/${receiver}/TraceLogFilter.java`,
     '@@ log the propagated trace id on every arriving request',
@@ -710,7 +710,7 @@ function buildEnhancement(component: string): EnhancementPlan {
     summary: `${component} → ${targets} is missing structured logs on the policy-decision path. Propagate the trace id in the request headers and log it on both sides, so the same id shows up in both services' logs.`,
     rationale: [
       `DeepWiki shows a live call edge to ${targets}, but Splunk has zero correlated log events for it.`,
-      'Carrying the trace id in the headers (W3C traceparent) and logging it on both the caller and the receiver makes every call correlate in Splunk — the same evidence Atlas uses to mark a link healthy.',
+      'Carrying the trace id in the headers (W3C traceparent) and logging it on both the caller and the receiver makes every call correlate in Splunk. That is the same evidence Atlas uses to mark a link healthy.',
       'Once both sides log the id, this edge flips from amber to a solid grey hairline.',
     ],
     diff,
@@ -797,7 +797,7 @@ function buildAlertPlan(component: string, traceId: string): AlertPlan {
     system: 'splunk',
     name: `Error spike: ${s}`,
     query: `index=prod service="${s}" level=ERROR earliest=-15m | timechart span=5m count | where count > 25`,
-    rationale: 'Errors on the service this trace flows through — page before callers notice.',
+    rationale: 'Errors on the service this trace flows through. Page before callers notice.',
   })
   const slowest = [...edges].sort((a, b) => b.p95LatencyMs - a.p95LatencyMs)[0]
   if (slowest) {
@@ -805,7 +805,7 @@ function buildAlertPlan(component: string, traceId: string): AlertPlan {
       system: 'sploc',
       name: `Latency guard: ${slowest.id.replace('->', ' → ')}`,
       query: `p95(span.duration{edge="${slowest.id}"}) > ${slowest.p95LatencyMs * 2}ms for 10m`,
-      rationale: `The slowest hop on this path runs at p95 ${slowest.p95LatencyMs}ms — alert at 2× before it degrades the whole trace.`,
+      rationale: `The slowest hop on this path runs at p95 ${slowest.p95LatencyMs}ms. Alert at 2× before it degrades the whole trace.`,
     })
   }
   const manifestYaml = [
@@ -827,7 +827,7 @@ function buildAlertPlan(component: string, traceId: string): AlertPlan {
   ].join('\n')
   return {
     traceId,
-    summary: `${rules.length} alert rules derived from ${traceId}'s call path — logging-gap regression, error spike, and a latency guard.`,
+    summary: `${rules.length} alert rules derived from ${traceId}'s call path: logging-gap regression, error spike, and a latency guard.`,
     manifestYaml,
     rules,
   }
@@ -840,7 +840,7 @@ function buildErrorRatePlan(component: string, target: string): EnhancementPlan 
   const targetName = NAME_BY_ID.get(t) ?? target
   const owned = NODES.find((n) => n.id === s)?.app === OUR_APP
   const diff = [
-    `# caller — github.com/acme/${s}`,
+    `# caller · github.com/acme/${s}`,
     `--- a/src/main/java/com/acme/${s}/DownstreamClient.java`,
     `+++ b/src/main/java/com/acme/${s}/DownstreamClient.java`,
     '@@ bound the failure: retry transient errors, cap the wait',
@@ -875,7 +875,7 @@ function buildWiki(nodeId: string): WikiDoc {
   const eps = ENDPOINTS[nodeId] ?? []
   const endpointsBody =
     eps.length === 0
-      ? 'No HTTP surface — this component is reached over Kafka / as a data store.'
+      ? 'No HTTP surface. This component is reached over Kafka or as a data store.'
       : eps.map((e) => `• ${e}`).join('\n')
   return {
     nodeId,
@@ -888,9 +888,9 @@ function buildWiki(nodeId: string): WikiDoc {
         title: 'Overview',
         summary: `${pretty} is a ${lang} component in the Guardrails platform. This wiki was generated by Devin from the repository source, commit history, and runtime traces.`,
         sections: [
-          { heading: 'Purpose', body: `Owns the ${lower} bounded context — policy evaluation, bundle management and orchestration of OPA decisions.` },
+          { heading: 'Purpose', body: `Owns the ${lower} bounded context: policy evaluation, bundle management and orchestration of OPA decisions.` },
           { heading: 'Tech Stack', body: `Built with ${lang}. Stateless and horizontally scaled behind the service mesh; configuration via Spring profiles per environment.` },
-          { heading: 'Repository Layout', body: 'adapters/{inbound,outbound} · application · domain · ports — a vertical-slice hexagonal structure, one package per capability.' },
+          { heading: 'Repository Layout', body: 'adapters/{inbound,outbound} · application · domain · ports: a vertical-slice hexagonal structure, one package per capability.' },
         ],
       },
       {
@@ -921,15 +921,15 @@ function buildWiki(nodeId: string): WikiDoc {
         title: 'Dependencies',
         summary: `Downstream components ${pretty} calls at runtime.`,
         sections: [
-          { heading: 'Downstream', body: '• BPE Mongo DB (Mongo) — policy bundle storage\n• OPA Pod / Sandbox OPA (HTTP) — policy decisions\n• Guardrails Client (HTTP) — evaluation chain\n• lightspeed-events (Kafka) — inbound event stream' },
+          { heading: 'Downstream', body: '• BPE Mongo DB (Mongo): policy bundle storage\n• OPA Pod / Sandbox OPA (HTTP): policy decisions\n• Guardrails Client (HTTP): evaluation chain\n• lightspeed-events (Kafka): inbound event stream' },
         ],
       },
       {
         title: 'Observability',
         summary: `Signals ${pretty} emits and the known gaps.`,
         sections: [
-          { heading: 'Telemetry', body: 'Metrics to Grafana, traces to SPLOC, logs to Splunk — correlated by trace id.' },
-          { heading: 'Known Gaps', body: 'NOTE: the OPA policy-decision call path is missing structured logs — see the Atlas missing-link finding and the suggested enhancement.' },
+          { heading: 'Telemetry', body: 'Metrics to Grafana, traces to SPLOC, logs to Splunk, correlated by trace id.' },
+          { heading: 'Known Gaps', body: 'NOTE: the OPA policy-decision call path is missing structured logs. See the Atlas missing-link finding and the suggested enhancement.' },
         ],
       },
     ],

@@ -44,7 +44,7 @@ export function explainMap(map: HealthMap): string[] {
 
   const lines: string[] = []
   lines.push(
-    `${center?.name ?? map.center} sits at the centre of a map of ${map.nodes.length} components — ` +
+    `${center?.name ?? map.center} sits at the centre of a map of ${map.nodes.length} components. ` +
       `${callers.length} callers reach it and it depends on ${deps.length} downstream services and stores.`,
   )
   const kindStr = [...kinds.entries()].map(([k, n]) => `${n} ${k}${n > 1 ? 's' : ''}`).join(', ')
@@ -55,19 +55,19 @@ export function explainMap(map: HealthMap): string[] {
     )
   }
   lines.push(
-    `Logging coverage is ${map.coverage.score}% — ${map.coverage.loggedEdges} of ${map.coverage.observedEdges} live links reach Splunk.`,
+    `Logging coverage is ${map.coverage.score}%: ${map.coverage.loggedEdges} of ${map.coverage.observedEdges} live links reach Splunk.`,
   )
   if (missing.length) {
     lines.push(
       `⚠ ${missing.length} live link${missing.length > 1 ? 's have' : ' has'} no logs: ` +
         missing.map((e) => `${e.source} → ${e.target}`).join(', ') +
-        '. These are blind spots — traces flow but nothing lands in Splunk.',
+        '. These are blind spots: traces flow but nothing lands in Splunk.',
     )
   }
   if (silent.length) {
     lines.push(
       `${silent.length} mapped link${silent.length > 1 ? 's show' : ' shows'} no traffic at all ` +
-        `(${silent.map((e) => `${e.source} → ${e.target}`).join(', ')}) — likely dead or misrouted.`,
+        `(${silent.map((e) => `${e.source} → ${e.target}`).join(', ')}), likely dead or misrouted.`,
     )
   }
   return lines

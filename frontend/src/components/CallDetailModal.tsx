@@ -58,7 +58,7 @@ export function CallDetailModal({ call, recent, onClose, onSafeguards }: Props) 
             Add Safeguards
           </Button>
           <span className="text-caption text-tertiary">
-            Turn this call into tests that replay it and alerts that watch it — payloads rebuilt
+            Turn this call into tests that replay it and alerts that watch it. Payloads are rebuilt
             from the endpoint’s OpenAPI spec.
           </span>
         </div>

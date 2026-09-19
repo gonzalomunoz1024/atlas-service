@@ -74,7 +74,7 @@ export function AlertRulesModal({ component, traceId, onBack, onClose }: Props) 
             ))}
 
             <p className="rounded-md bg-surface-secondary p-3 text-center text-caption text-tertiary">
-              Copy the manifest into your repo — creating rules directly via the Splunk/SPLOC
+              Copy the manifest into your repo. Creating rules directly via the Splunk/SPLOC
               alerting APIs isn’t available against mock data.
             </p>
           </>
