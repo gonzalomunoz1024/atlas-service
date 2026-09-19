@@ -413,15 +413,18 @@ export const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
           ctx.globalAlpha = spawn
 
           if (staticTopology) {
-            // no observability for this revision — just the documented relationship
+            // no observability for this revision — dotted, like any documented-but-unobserved
+            // relationship (the silent-edge language, applied to the whole map)
             const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y)
             const base = pal.dark ? '#ebebf5' : '#3c3c43'
-            grad.addColorStop(0, withAlpha(base, (pal.dark ? 0.1 : 0.13) * Math.min(1.6, e)))
-            grad.addColorStop(1, withAlpha(base, (pal.dark ? 0.26 : 0.3) * Math.min(1.6, e)))
+            grad.addColorStop(0, withAlpha(base, (pal.dark ? 0.12 : 0.16) * Math.min(1.6, e)))
+            grad.addColorStop(1, withAlpha(base, (pal.dark ? 0.3 : 0.34) * Math.min(1.6, e)))
             traceLinkPath(ctx, s, t, curv)
             ctx.strokeStyle = grad
             ctx.lineWidth = highlighted || hovered ? 2 : 1.15
+            ctx.setLineDash([2, 4])
             ctx.stroke()
+            ctx.setLineDash([])
           } else if (link.linkStatus === 'missing_logs') {
             // insight shimmer: soft swell while the moment is live
             let glow = 0.16
