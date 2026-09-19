@@ -65,8 +65,7 @@ export function SearchLanding({ onOpen }: { onOpen: (name: string) => void }) {
           Atlas
         </h1>
         <p className="animate-fade-in mt-4 text-body text-secondary" style={reveal(2)}>
-          Watch every dependency live, catch the calls your logs never see, and turn traces into
-          safeguards.
+          The map, the traffic, and the gaps between them.
         </p>
 
         <div className="animate-fade-in relative mt-10" style={reveal(3)}>
