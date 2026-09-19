@@ -56,7 +56,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string; fromChooser?: boolean } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [alertTrace, setAlertTrace] = useState<string | null>(null)
-  const [safeguardTrace, setSafeguardTrace] = useState<string | null>(null)
+  const [safeguardTrace, setSafeguardTrace] = useState<{ traceId: string; node?: string; endpoint?: string } | null>(null)
   const [enhanceComponent, setEnhanceComponent] = useState<string | null>(null)
   const graphRef = useRef<GraphHandle>(null)
 
@@ -657,7 +657,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             fix={traceCtx.fix}
             evidenceNote={traceCtx.evidenceNote}
             onClose={() => setTraceCtx(null)}
-            onSafeguards={setSafeguardTrace}
+            onSafeguards={(traceId) => setSafeguardTrace({ traceId })}
           />
         )}
 
@@ -669,12 +669,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         )}
         {safeguardTrace && (
           <SafeguardsModal
-            traceId={safeguardTrace}
+            traceId={safeguardTrace.traceId}
             onPick={(kind) => {
-              const traceId = safeguardTrace
+              const ctx = safeguardTrace
               setSafeguardTrace(null)
-              if (kind === 'synthetic') setSyntheticTrace({ traceId, fromChooser: true })
-              else setAlertTrace(traceId)
+              if (kind === 'synthetic') setSyntheticTrace({ ...ctx, fromChooser: true })
+              else setAlertTrace(ctx.traceId)
             }}
             onClose={() => setSafeguardTrace(null)}
           />
@@ -685,7 +685,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             component={component}
             traceId={alertTrace}
             onBack={() => {
-              setSafeguardTrace(alertTrace)
+              setSafeguardTrace({ traceId: alertTrace })
               setAlertTrace(null)
             }}
             onClose={() => setAlertTrace(null)}
@@ -700,7 +700,11 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             onBack={
               syntheticTrace.fromChooser
                 ? () => {
-                    setSafeguardTrace(syntheticTrace.traceId)
+                    setSafeguardTrace({
+                      traceId: syntheticTrace.traceId,
+                      node: syntheticTrace.node,
+                      endpoint: syntheticTrace.endpoint,
+                    })
                     setSyntheticTrace(null)
                   }
                 : undefined
@@ -713,9 +717,9 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             call={callDetail}
             recent={incoming}
             onClose={() => setCallDetail(null)}
-            onSynthetic={(traceId, endpoint) => {
+            onSafeguards={(traceId, endpoint) => {
               setCallDetail(null)
-              setSyntheticTrace({ traceId, node: inspect.name, endpoint })
+              setSafeguardTrace({ traceId, node: inspect.name, endpoint })
             }}
           />
         )}

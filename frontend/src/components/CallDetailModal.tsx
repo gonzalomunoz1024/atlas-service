@@ -14,11 +14,11 @@ interface Props {
   /** the full live buffer, for endpoint-level aggregate metrics */
   recent: IncomingTrace[]
   onClose: () => void
-  onSynthetic: (traceId: string, endpoint?: string) => void
+  onSafeguards: (traceId: string, endpoint?: string) => void
 }
 
 /** Detail popup for one observed incoming call: metrics, trace waterfall + logs, synthetic action. */
-export function CallDetailModal({ call, recent, onClose, onSynthetic }: Props) {
+export function CallDetailModal({ call, recent, onClose, onSafeguards }: Props) {
   const [detail, setDetail] = useState<TraceDetail | null>(null)
 
   useEffect(() => {
@@ -53,12 +53,12 @@ export function CallDetailModal({ call, recent, onClose, onSynthetic }: Props) {
         </div>
 
         <div className="mt-5 flex items-center gap-2">
-          <Button variant="primary" onClick={() => onSynthetic(call.traceId, call.endpoint)}>
-            <Icon name="flask" size={14} />
-            Create Synthetic Transaction
+          <Button variant="primary" onClick={() => onSafeguards(call.traceId, call.endpoint)}>
+            <Icon name="shield" size={14} />
+            Add Safeguards
           </Button>
           <span className="text-caption text-tertiary">
-            Payload generated from the service’s OpenAPI spec via DeepWiki.
+            Tests &amp; alerts from this call — payloads via the service’s OpenAPI spec.
           </span>
         </div>
       </div>
