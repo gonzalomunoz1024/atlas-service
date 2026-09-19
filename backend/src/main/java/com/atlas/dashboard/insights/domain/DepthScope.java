@@ -61,6 +61,7 @@ public final class DepthScope {
                 map.center(),
                 map.nodes().stream().filter(n -> keep.contains(n.id())).toList(),
                 edges,
-                MissingLinkDetector.coverage(edges));
+                MissingLinkDetector.coverage(edges),
+                MapInsights.of(map.center(), edges));
     }
 }

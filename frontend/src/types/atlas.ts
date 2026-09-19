@@ -139,11 +139,21 @@ export interface CoverageScore {
   score: number
 }
 
+/** Server-judged map facts the UI must not re-derive. */
+export interface MapInsights {
+  gapTouchedNodeIds: string[]
+  gapSourceNodeIds: string[]
+  centerEdgeIds: string[]
+  /** flagged edges, worst first (missing logs before silent) */
+  flaggedEdgeIds: string[]
+}
+
 export interface HealthMap {
   center: string
   nodes: ComponentNode[]
   edges: HealthEdge[]
   coverage: CoverageScore
+  insights: MapInsights
 }
 
 export type FlowStatus = 'ok' | 'error'

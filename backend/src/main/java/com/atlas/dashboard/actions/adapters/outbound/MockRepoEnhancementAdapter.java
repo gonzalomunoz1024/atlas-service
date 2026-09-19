@@ -96,7 +96,7 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
     }
 
     @Override
-    public Mono<EnhancementPlan> errorRatePlan(String component, String target) {
+    public Mono<EnhancementPlan> errorRatePlan(String component, String target, double measuredRatePct) {
         return Mono.fromSupplier(() -> {
             String slug = fixture.slug(component);
             String targetSlug = fixture.slug(target);
@@ -117,7 +117,8 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
             return new EnhancementPlan(
                     component,
                     owned,
-                    component + " → " + targetName + " is erroring above the configured threshold. "
+                    component + " → " + targetName + " is erroring at "
+                            + String.format("%.1f", measuredRatePct) + "% over the last 15 min. "
                             + "Bound the failure with retry + timeout on the caller, and alert on the "
                             + "sustained rate so regressions page the owning team.",
                     List.of(

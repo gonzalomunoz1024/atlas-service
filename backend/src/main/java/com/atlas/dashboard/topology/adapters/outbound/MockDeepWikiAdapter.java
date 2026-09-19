@@ -94,26 +94,14 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
     }
 
     @Override
-    public Mono<List<EndpointFlow>> endpoints(String nodeId) {
-        // the request path from the original invoker into this node is shared by all its endpoints
-        List<String> upstream = com.atlas.dashboard.common.domain.TopologyRules.upstreamEdges(
-                nodeId, fixture.edges(nodeId, null), fixture.serviceIds(null));
-        return Mono.fromSupplier(() -> fixture.endpoints(nodeId).stream()
-                .map(ep -> {
-                    java.util.LinkedHashSet<String> edges = new java.util.LinkedHashSet<>(upstream);
-                    edges.addAll(fixture.endpointDownstream(nodeId, ep));
-                    java.util.LinkedHashSet<String> nodes = new java.util.LinkedHashSet<>();
-                    nodes.add(nodeId);
-                    for (String e : edges) {
-                        int arrow = e.indexOf("->");
-                        if (arrow >= 0) {
-                            nodes.add(e.substring(0, arrow));
-                            nodes.add(e.substring(arrow + 2));
-                        }
-                    }
-                    return new EndpointFlow(ep, List.copyOf(nodes), List.copyOf(edges));
-                })
-                .toList());
+    public Mono<java.util.Map<String, List<String>>> endpointDownstream(String nodeId) {
+        return Mono.fromSupplier(() -> {
+            java.util.Map<String, List<String>> out = new java.util.LinkedHashMap<>();
+            for (String ep : fixture.endpoints(nodeId)) {
+                out.put(ep, fixture.endpointDownstream(nodeId, ep));
+            }
+            return out;
+        });
     }
 
     private WikiDoc buildWiki(String nodeId) {

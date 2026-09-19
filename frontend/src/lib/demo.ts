@@ -201,11 +201,24 @@ function buildHealthMap(centerName: string, rev?: string, maxDepth?: number): He
   const score = observedEdges === 0 ? 0 : Math.round((loggedEdges / observedEdges) * 100)
   // mirrors backend CoverageScore.of: the verdict band is served, never client-judged
   const band = score >= 90 ? ('good' as const) : score >= 60 ? ('warn' as const) : ('critical' as const)
+  // mirrors backend MapInsights.of: the offer/eligibility judgments are served facts
+  const gapEdges = edges.filter((e) => e.linkStatus === 'missing_logs')
+  const rank = (e: HealthEdge) => (e.linkStatus === 'missing_logs' ? 0 : e.linkStatus === 'silent' ? 1 : 2)
+  const insights = {
+    gapTouchedNodeIds: [...new Set(gapEdges.flatMap((e) => [e.source, e.target]))],
+    gapSourceNodeIds: [...new Set(gapEdges.map((e) => e.source))],
+    centerEdgeIds: edges.filter((e) => e.source === center || e.target === center).map((e) => e.id),
+    flaggedEdgeIds: edges
+      .filter((e) => e.linkStatus !== 'healthy')
+      .sort((a, b) => rank(a) - rank(b))
+      .map((e) => e.id),
+  }
   return {
     center,
     nodes,
     edges,
     coverage: { loggedEdges, observedEdges, totalEdges: edges.length, score, band },
+    insights,
   }
 }
 
@@ -844,7 +857,7 @@ function buildAlertPlan(component: string, traceId: string): AlertPlan {
   ].join('\n')
   return {
     traceId,
-    summary: `${rules.length} alert rules derived from ${traceId}'s call path: logging-gap regression, error spike, and a latency guard.`,
+    summary: `${rules.length} alert rules for the service ${traceId} travels: logging-gap regression, error spike, and a latency guard.`,
     manifestYaml,
     rules,
   }
@@ -871,7 +884,7 @@ function buildErrorRatePlan(component: string, target: string): EnhancementPlan 
   return {
     component,
     owned,
-    summary: `${component} → ${targetName} is erroring above the configured threshold. Bound the failure with retry + timeout on the caller, and alert on the sustained rate so regressions page the owning team.`,
+    summary: `${component} → ${targetName} is erroring at ${(buildEdgeHealth(component, undefined, 15, 10).find((e) => e.edgeId === `${s}->${t}`)?.ratePct ?? 0).toFixed(1)}% over the last 15 min. Bound the failure with retry + timeout on the caller, and alert on the sustained rate so regressions page the owning team.`,
     rationale: [
       `Add bounded retry with backoff and a hard timeout on the call to ${targetName}.`,
       'Alert on the sustained error rate so regressions page the owning team.',

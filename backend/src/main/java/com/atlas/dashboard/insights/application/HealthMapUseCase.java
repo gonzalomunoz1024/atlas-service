@@ -10,6 +10,7 @@ import com.atlas.dashboard.insights.domain.EdgeHealthStatus;
 import com.atlas.dashboard.insights.domain.EndpointStat;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.HealthMap;
+import com.atlas.dashboard.insights.domain.MapInsights;
 import com.atlas.dashboard.insights.domain.MissingLinkDetector;
 import com.atlas.dashboard.insights.ports.inbound.InsightsInboundPort;
 import com.atlas.dashboard.insights.ports.outbound.ObservabilityPort;
@@ -42,7 +43,8 @@ public class HealthMapUseCase implements InsightsInboundPort {
                             graph.center(),
                             graph.nodes().stream().map(NodeKindRule::apply).toList(),
                             edges,
-                            MissingLinkDetector.coverage(edges));
+                            MissingLinkDetector.coverage(edges),
+                            MapInsights.of(graph.center(), edges));
                     return maxDepth != null ? DepthScope.apply(map, maxDepth) : map;
                 });
     }

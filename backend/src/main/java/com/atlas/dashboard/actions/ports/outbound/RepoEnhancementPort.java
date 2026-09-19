@@ -14,8 +14,12 @@ public interface RepoEnhancementPort {
      */
     Mono<EnhancementPlan> plan(String component, java.util.List<String> gapTargetIds);
 
-    /** Remediation plan for a source→target call whose live error rate crossed the threshold. */
-    Mono<EnhancementPlan> errorRatePlan(String component, String target);
+    /**
+     * Remediation plan for a source→target call whose live error rate crossed the threshold.
+     * {@code measuredRatePct} is the server-measured windowed rate — the use case verifies it;
+     * the adapter only writes the plan.
+     */
+    Mono<EnhancementPlan> errorRatePlan(String component, String target, double measuredRatePct);
 
     /** The case file for a mapped-but-silent link: what it means and what to do next. */
     Mono<SilentEdgeFinding> silentEdgeFinding(String component, String sourceId, String targetId);

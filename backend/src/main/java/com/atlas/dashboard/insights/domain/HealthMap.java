@@ -8,5 +8,6 @@ public record HealthMap(
         String center,
         List<ComponentNode> nodes,
         List<HealthEdge> edges,
-        CoverageScore coverage) {
+        CoverageScore coverage,
+        MapInsights insights) {
 }

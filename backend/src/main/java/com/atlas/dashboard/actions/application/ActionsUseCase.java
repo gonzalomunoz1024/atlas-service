@@ -50,7 +50,12 @@ public class ActionsUseCase implements ActionsInboundPort {
 
     @Override
     public Mono<EnhancementPlan> errorRateEnhancement(String component, String target) {
-        return repoEnhancement.errorRatePlan(component, target);
+        // ground the plan in OUR measured windowed rate rather than the caller's say-so
+        String slug = slugOf(component);
+        String targetSlug = slugOf(target);
+        return observability.windowedErrorRates(component, null, 15)
+                .map(rates -> rates.getOrDefault(slug + "->" + targetSlug, 0.0) * 100.0)
+                .flatMap(ratePct -> repoEnhancement.errorRatePlan(component, target, ratePct));
     }
 
     @Override
@@ -63,7 +68,7 @@ public class ActionsUseCase implements ActionsInboundPort {
                     var rules = AlertRules.derive(slug, traceId, obs.values());
                     return new AlertPlan(
                             traceId,
-                            rules.size() + " alert rules derived from " + traceId + "'s call path: "
+                            rules.size() + " alert rules for the service " + traceId + " travels: "
                                     + "logging-gap regression, error spike, and a latency guard.",
                             AlertManifests.yaml(traceId, slug, rules),
                             rules);

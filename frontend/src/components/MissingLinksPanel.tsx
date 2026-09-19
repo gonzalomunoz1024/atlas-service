@@ -10,20 +10,22 @@ import { cx } from '../lib/cx'
 
 interface Props {
   edges: HealthEdge[]
+  /** server-judged worst-first ordering of the flagged edges */
+  flaggedEdgeIds: string[]
   onFocus: (edge: HealthEdge) => void
   /** plays a one-shot attention pulse (the insight moment) */
   pulse?: boolean
 }
 
-export function MissingLinksPanel({ edges, onFocus, pulse }: Props) {
+export function MissingLinksPanel({ edges, flaggedEdgeIds, onFocus, pulse }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
 
-  const flagged = edges
-    .filter((e) => e.linkStatus !== 'healthy')
-    .sort((a, b) => rank(a) - rank(b))
+  // membership and order are the server's judgment; we only resolve ids to edges
+  const byId = new Map(edges.map((e) => [e.id, e]))
+  const flagged = flaggedEdgeIds.map((id) => byId.get(id)).filter((e): e is HealthEdge => !!e)
 
   // Healthy state: a quiet, positive pill. Nothing to expand.
   if (flagged.length === 0) {
@@ -95,8 +97,4 @@ export function MissingLinksPanel({ edges, onFocus, pulse }: Props) {
       )}
     </div>
   )
-}
-
-function rank(e: HealthEdge): number {
-  return e.linkStatus === 'missing_logs' ? 0 : e.linkStatus === 'silent' ? 1 : 2
 }

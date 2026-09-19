@@ -17,6 +17,8 @@ interface Props {
   component: string
   node: ComponentNode
   edges: HealthEdge[]
+  /** server-judged: nodes touching a logging-gap edge (drives the banner) */
+  gapNodeIds: string[]
   /** false when viewing an undeployed commit — no observability data exists */
   running?: boolean
   initialTab?: Tab
@@ -26,7 +28,7 @@ interface Props {
   onBlast: () => void
 }
 
-export function NodeModal({ component, node, edges, running = true, initialTab = 'overview', onClose, onViewTraces, onEnhance, onBlast }: Props) {
+export function NodeModal({ component, node, edges, gapNodeIds, running = true, initialTab = 'overview', onClose, onViewTraces, onEnhance, onBlast }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [wiki, setWiki] = useState<WikiDoc | null>(null)
   const [wikiError, setWikiError] = useState(false)
@@ -57,7 +59,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
     pts && pts.length > 0 ? pts[pts.length - 1].value : undefined
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id)
-  const missingLog = running && related.some((e) => e.linkStatus === 'missing_logs')
+  const missingLog = running && gapNodeIds.includes(node.id)
 
   useEffect(() => {
     if (tab === 'wiki' && !wiki) {

@@ -302,14 +302,13 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         (repoView?.running ?? true) && edge.linkStatus === 'healthy' && edge.logEvidence !== 'none'
           ? EVIDENCE_LABEL[edge.logEvidence].toLowerCase()
           : undefined
-      // safeguards protect the root — only offer them when this edge invokes (or is) the root
-      const center = map?.nodes.find((n) => n.center)?.id
       setTraceCtx({
         title: `${nameOf(src)} → ${nameOf(tgt)}`,
         edge: edgeId,
         fix,
         evidenceNote,
-        safeguards: src === center || tgt === center,
+        // the safeguard-offer context is a served judgment (MapInsights), not a client rule
+        safeguards: map?.insights.centerEdgeIds.includes(edgeId) ?? false,
       })
     },
     [map, nameOf, edgeRates, healthSettings, repoView],
@@ -431,7 +430,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       },
       // only offered when the map actually shows a logging gap leaving the root service,
       // so the enhancement popup can never contradict the graph
-      ...(center && map.edges.some((e) => e.linkStatus === 'missing_logs' && e.source === center.id)
+      ...(center && map.insights.gapSourceNodeIds.includes(center.id)
         ? [
             {
               id: 'act-enhance',
@@ -625,7 +624,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         {/* missing links — the actual job, top-right (hidden for undeployed commits: no data) */}
         {running && (
           <div className="absolute right-4 top-4">
-            <MissingLinksPanel edges={map.edges} onFocus={focusEdge} pulse={insightPulse} />
+            <MissingLinksPanel edges={map.edges} flaggedEdgeIds={map.insights.flaggedEdgeIds} onFocus={focusEdge} pulse={insightPulse} />
           </div>
         )}
 
@@ -635,6 +634,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             component={component}
             node={selected}
             edges={map.edges}
+            gapNodeIds={map.insights.gapTouchedNodeIds}
             running={running}
             initialTab={modalTab}
             onClose={() => setSelected(null)}
