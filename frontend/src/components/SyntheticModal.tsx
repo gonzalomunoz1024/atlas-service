@@ -78,7 +78,7 @@ function Header() {
         <span className="rounded-sm bg-accent-tint px-2 py-1 text-caption font-semibold text-accent">
           HyperExecute
         </span>
-        <h2 className="text-title3 font-semibold text-primary">Synthetic Test</h2>
+        <h2 className="text-title3 font-semibold text-primary">Testing Framework</h2>
       </div>
       <IconButton label="Close" onClick={close}>
         <Icon name="close" size={18} />

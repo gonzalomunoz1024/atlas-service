@@ -80,7 +80,7 @@ function Header({ traceId }: { traceId: string }) {
   return (
     <div className="flex items-center justify-between border-b border-stroke-light p-5">
       <div>
-        <h2 className="text-title3 font-semibold text-primary">Alert Rules</h2>
+        <h2 className="text-title3 font-semibold text-primary">Observability as Code</h2>
         <p className="font-mono text-sm text-secondary">{traceId}</p>
       </div>
       <IconButton label="Close" onClick={close}>
