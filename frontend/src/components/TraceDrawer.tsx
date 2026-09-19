@@ -309,26 +309,29 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
           <ul>
             {filtered.map((t) => (
               <li key={t.traceId} className="border-b border-stroke-light">
-                <button
-                  onClick={() => setOpenId(openId === t.traceId ? null : t.traceId)}
-                  className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-secondary"
-                >
-                  <StatusDot kind={t.status === 'error' ? 'error' : 'ok'} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="flex items-center gap-1.5 text-caption font-medium text-primary">
-                      <Icon name="arrow-right" size={12} className="shrink-0 text-tertiary" />
-                      <span className="truncate">{t.entryService}</span>
+                <div className="flex w-full items-center gap-2 pr-4 transition-colors hover:bg-surface-secondary">
+                  <button
+                    onClick={() => setOpenId(openId === t.traceId ? null : t.traceId)}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-5 text-left"
+                  >
+                    <StatusDot kind={t.status === 'error' ? 'error' : 'ok'} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="flex items-center gap-1.5 text-caption font-medium text-primary">
+                        <Icon name="arrow-right" size={12} className="shrink-0 text-tertiary" />
+                        <span className="truncate">{t.entryService}</span>
+                      </span>
+                      <span className="font-mono text-[10px] text-tertiary">{t.traceId}</span>
                     </span>
-                    <span className="font-mono text-[10px] text-tertiary">{t.traceId}</span>
-                  </span>
-                  {t.status === 'error' && (
-                    <span className="shrink-0 text-[10px] font-medium text-critical">error</span>
-                  )}
-                  <span className="ml-auto flex shrink-0 flex-col items-end">
-                    <span className="text-caption tabular-nums text-tertiary">{t.durationMs}ms</span>
-                    <span className="text-[10px] tabular-nums text-tertiary">{timeAgo(t.startedAt)}</span>
-                  </span>
-                </button>
+                    {t.status === 'error' && (
+                      <span className="shrink-0 text-[10px] font-medium text-critical">error</span>
+                    )}
+                    <span className="ml-auto flex shrink-0 flex-col items-end">
+                      <span className="text-caption tabular-nums text-tertiary">{t.durationMs}ms</span>
+                      <span className="text-[10px] tabular-nums text-tertiary">{timeAgo(t.startedAt)}</span>
+                    </span>
+                  </button>
+                  <CopyTraceId traceId={t.traceId} />
+                </div>
 
                 {openId === t.traceId && (
                   <div className="bg-surface-tertiary px-5 py-4">
@@ -525,5 +528,23 @@ function SilentEdgeEvidence({
         </ul>
       </div>
     </div>
+  )
+}
+
+/** Quiet per-row copy affordance for the trace id (flashes a check on copy). */
+function CopyTraceId({ traceId }: { traceId: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <IconButton
+      label="Copy trace ID"
+      className="h-7 w-7 shrink-0"
+      onClick={() => {
+        navigator.clipboard?.writeText(traceId)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1400)
+      }}
+    >
+      <Icon name={copied ? 'check' : 'copy'} size={13} className={copied ? 'text-healthy' : 'text-tertiary'} />
+    </IconButton>
   )
 }
