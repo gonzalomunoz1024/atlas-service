@@ -3,6 +3,7 @@ package com.atlas.dashboard.topology.ports.inbound;
 import java.util.List;
 
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
 import com.atlas.dashboard.topology.domain.EndpointFlow;
@@ -27,4 +28,7 @@ public interface TopologyInboundPort {
     Mono<RepoRevisions> revisions(String component);
 
     Mono<List<ApiOperation>> apiSpec(String component, String nodeId);
+
+    /** OpenShift cluster deployments for an app node (empty for non-app nodes). */
+    Mono<List<ClusterDeployment>> deployments(String component, String nodeId);
 }

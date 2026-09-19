@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.atlas.dashboard.common.domain.NodeKindRule;
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
 import com.atlas.dashboard.topology.domain.EndpointFlow;
@@ -15,6 +16,7 @@ import com.atlas.dashboard.topology.domain.WikiDoc;
 import com.atlas.dashboard.topology.ports.inbound.TopologyInboundPort;
 import com.atlas.dashboard.topology.ports.outbound.DeepWikiPort;
 import com.atlas.dashboard.topology.ports.outbound.GrafanaPort;
+import com.atlas.dashboard.topology.ports.outbound.OpenShiftPort;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
@@ -26,6 +28,7 @@ public class TopologyUseCase implements TopologyInboundPort {
 
     private final DeepWikiPort deepWiki;
     private final GrafanaPort grafana;
+    private final OpenShiftPort openShift;
 
     @Override
     public Flux<ComponentSummary> search(String query) {
@@ -65,5 +68,10 @@ public class TopologyUseCase implements TopologyInboundPort {
     @Override
     public Mono<List<ApiOperation>> apiSpec(String component, String nodeId) {
         return deepWiki.apiSpec(nodeId);
+    }
+
+    @Override
+    public Mono<List<ClusterDeployment>> deployments(String component, String nodeId) {
+        return openShift.deployments(nodeId);
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ApiOperation, ComponentNode, HealthEdge, WikiDoc } from '../types/atlas'
+import type { ApiOperation, ClusterDeployment, ComponentNode, HealthEdge, WikiDoc } from '../types/atlas'
 import { api } from '../lib/api'
 import { EDGE_KIND_LABEL, EVIDENCE_LABEL, HEALTH_COLOR_VAR, LINK_COLOR_VAR, LINK_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
 import { NodeGlyph } from './NodeGlyph'
@@ -11,7 +11,7 @@ import { SkeletonRows } from './ui/Skeleton'
 import { EmptyState } from './ui/EmptyState'
 import { cx } from '../lib/cx'
 
-type Tab = 'overview' | 'wiki' | 'api'
+type Tab = 'overview' | 'deploy' | 'wiki' | 'api'
 
 interface Props {
   component: string
@@ -32,11 +32,20 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
   const [wikiError, setWikiError] = useState(false)
   const [wikiPage, setWikiPage] = useState(0)
   const [spec, setSpec] = useState<ApiOperation[] | null>(null)
+  const [deployments, setDeployments] = useState<ClusterDeployment[] | null>(null)
 
   // prefetch the OpenAPI spec so the tab only appears when the repo has one
   useEffect(() => {
     api.nodeOpenApi(component, node.id).then(setSpec).catch(() => setSpec([]))
   }, [component, node.id])
+
+  // apps run on OCP clusters; only they get the Deployment tab
+  const isApp = node.kind === 'service' || node.kind === 'external'
+  useEffect(() => {
+    if (tab === 'deploy' && !deployments) {
+      api.nodeDeployments(component, node.id).then(setDeployments).catch(() => setDeployments([]))
+    }
+  }, [tab, deployments, component, node.id])
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id)
   const missingLog = running && related.some((e) => e.linkStatus === 'missing_logs')
@@ -56,7 +65,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
 
       {/* tabs */}
       <div className="flex gap-1 px-5 pt-3">
-        {(['overview', 'wiki', ...(spec && spec.length > 0 ? (['api'] as Tab[]) : [])] as Tab[]).map((t) => (
+        {(['overview', ...(isApp ? (['deploy'] as Tab[]) : []), 'wiki', ...(spec && spec.length > 0 ? (['api'] as Tab[]) : [])] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -65,7 +74,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               tab === t ? 'bg-surface-secondary text-primary' : 'text-secondary hover:text-primary',
             )}
           >
-            {t === 'wiki' ? 'DeepWiki' : t === 'api' ? 'OpenAPI' : t}
+            {t === 'wiki' ? 'DeepWiki' : t === 'api' ? 'OpenAPI' : t === 'deploy' ? 'Deployment' : t}
           </button>
         ))}
       </div>
@@ -139,6 +148,62 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               )}
               <Button onClick={onBlast}>Blast Radius</Button>
             </div>
+          </div>
+        )}
+
+        {tab === 'deploy' && (
+          <div className="space-y-4">
+            <p className="text-caption text-tertiary">
+              OpenShift placements from the cluster inventory — where this application runs, per
+              environment.
+            </p>
+            {!deployments ? (
+              <SkeletonRows n={3} />
+            ) : deployments.length === 0 ? (
+              <EmptyState
+                icon="ring"
+                title="Not Deployed on OCP"
+                message="No cluster placements found for this component."
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {deployments.map((d, i) => (
+                  <div key={i} className="rounded-md border border-stroke-light p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-title3 font-semibold tracking-tight text-primary">
+                        {d.cluster}
+                      </span>
+                      <span
+                        className={cx(
+                          'rounded-full px-2 py-0.5 text-caption2 font-semibold uppercase',
+                          d.env === 'prod' ? 'bg-accent-tint text-accent' : 'bg-surface-secondary text-secondary',
+                        )}
+                      >
+                        {d.env}
+                      </span>
+                      <span className="ml-auto inline-flex items-center gap-1.5 text-caption text-secondary">
+                        <StatusDot kind="ok" />
+                        {d.status}
+                      </span>
+                    </div>
+                    <dl className="mt-2.5 space-y-1 text-caption">
+                      <div className="flex justify-between">
+                        <dt className="text-tertiary">Region</dt>
+                        <dd className="font-mono text-secondary">{d.region}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-tertiary">Namespace</dt>
+                        <dd className="font-mono text-secondary">{d.namespace}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-tertiary">Replicas</dt>
+                        <dd className="tabular-nums text-secondary">{d.replicas}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

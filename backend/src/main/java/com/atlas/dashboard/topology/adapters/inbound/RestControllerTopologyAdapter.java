@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.atlas.dashboard.topology.application.TopologyUseCase;
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
 import com.atlas.dashboard.topology.domain.EndpointFlow;
@@ -70,5 +71,11 @@ public class RestControllerTopologyAdapter implements TopologyInboundPort {
     @GetMapping("/components/{component}/nodes/{nodeId}/openapi")
     public Mono<List<ApiOperation>> apiSpec(@PathVariable String component, @PathVariable String nodeId) {
         return useCase.apiSpec(component, nodeId);
+    }
+
+    @Override
+    @GetMapping("/components/{component}/nodes/{nodeId}/deployments")
+    public Mono<List<ClusterDeployment>> deployments(@PathVariable String component, @PathVariable String nodeId) {
+        return useCase.deployments(component, nodeId);
     }
 }

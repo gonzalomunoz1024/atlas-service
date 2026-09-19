@@ -60,6 +60,16 @@ export interface HealthEdge extends DependencyEdge {
   p95LatencyMs: number
 }
 
+/** One OpenShift deployment of an application: which OCP cluster it runs on, and where. */
+export interface ClusterDeployment {
+  cluster: string
+  env: string
+  region: string
+  namespace: string
+  replicas: number
+  status: string
+}
+
 /** One proposed alert rule; system is the platform it belongs to. */
 export interface AlertRule {
   system: 'splunk' | 'sploc'

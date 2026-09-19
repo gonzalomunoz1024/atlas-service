@@ -1,6 +1,7 @@
 import type {
   AlertPlan,
   ApiOperation,
+  ClusterDeployment,
   EdgeHealthStatus,
   ComponentGraph,
   ComponentSummary,
@@ -123,6 +124,12 @@ export const api = {
     DEMO_MODE
       ? demo.nodeOpenApi(nodeId)
       : get(`/v1/components/${encodeURIComponent(name)}/nodes/${encodeURIComponent(nodeId)}/openapi`),
+
+  /** OpenShift cluster deployments for an app node (empty for non-app nodes). */
+  nodeDeployments: (name: string, nodeId: string): Promise<ClusterDeployment[]> =>
+    DEMO_MODE
+      ? demo.nodeDeployments(nodeId)
+      : get(`/v1/components/${encodeURIComponent(name)}/nodes/${encodeURIComponent(nodeId)}/deployments`),
 
   enhancement: (component: string): Promise<EnhancementPlan> =>
     DEMO_MODE ? demo.enhancement(component) : post(`/v1/enhancements/${encodeURIComponent(component)}`),

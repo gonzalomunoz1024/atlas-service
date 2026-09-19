@@ -1,6 +1,7 @@
 import type {
   AlertPlan,
   ApiOperation,
+  ClusterDeployment,
   EdgeHealthStatus,
   ComponentGraph,
   ComponentNode,
@@ -744,6 +745,40 @@ function buildEdgeHealth(
     })
 }
 
+// The OCP cluster fleet — mirrors MockOpenShiftAdapter
+const OCP_CLUSTERS: [string, string][] = [
+  ['GAR', 'us-east-1'],
+  ['STR', 'eu-west-1'],
+  ['LEW', 'us-west-2'],
+]
+
+function buildDeployments(nodeId: string): ClusterDeployment[] {
+  // only application nodes run on OCP — topics and stores are managed infra
+  // (raw spec kind: every app is 'service' here; the external remap happens at node build)
+  const spec = NODES.find((n) => n.id === nodeId)
+  if (!spec || spec.kind !== 'service') return []
+  const rand = seeded(nodeId + ':ocp')
+  const first = Math.floor(rand() * OCP_CLUSTERS.length)
+  const prodA = OCP_CLUSTERS[first]
+  const prodB = OCP_CLUSTERS[(first + 1 + Math.floor(rand() * (OCP_CLUSTERS.length - 1))) % OCP_CLUSTERS.length]
+  const test = OCP_CLUSTERS[Math.floor(rand() * OCP_CLUSTERS.length)]
+  const dev = OCP_CLUSTERS[Math.floor(rand() * OCP_CLUSTERS.length)]
+  const mk = (c: [string, string], env: string, replicas: number): ClusterDeployment => ({
+    cluster: c[0],
+    env,
+    region: c[1],
+    namespace: `${nodeId}-${env}`,
+    replicas,
+    status: 'Healthy',
+  })
+  return [
+    mk(prodA, 'prod', 4 + Math.floor(rand() * 5)),
+    mk(prodB, 'prod', 4 + Math.floor(rand() * 5)),
+    mk(test, 'test', 2),
+    mk(dev, 'dev', 1 + Math.floor(rand() * 2)),
+  ]
+}
+
 function buildAlertPlan(component: string, traceId: string): AlertPlan {
   // mirrors MockAlertingAdapter: rules derived from the component's observed topology
   const edges = buildHealthMap(component).edges.filter((e) => e.observed)
@@ -926,6 +961,7 @@ export const demo = {
   nodeMetrics: (nodeId: string) => wait(buildMetrics(nodeId)),
   nodeWiki: (nodeId: string) => wait(buildWiki(nodeId)),
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),
+  nodeDeployments: (nodeId: string) => wait(buildDeployments(nodeId)),
   nodeOpenApi: (nodeId: string): Promise<ApiOperation[]> => wait(buildOpenApi(nodeId)),
   traces: (component: string, limit: number, rev?: string, earliest?: string, latest?: string) =>
     wait(buildTraceSummaries(component, limit, rev, earliest, latest)),
