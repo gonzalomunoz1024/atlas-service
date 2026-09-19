@@ -325,6 +325,8 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
     setBlast(null)
     setHighlight(null)
     setInspect(null)
+    setIncoming([])
+    setEndpointFilter('all')
     setFlowSource((cur) => (cur?.id === node.id ? null : { id: node.id, name: node.name }))
   }, [])
 
@@ -542,6 +544,12 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             shimmerMissingUntil={shimmerUntil}
             staticTopology={!running}
             onNodeInspect={(node) => {
+              // opening another node's modal also dismisses the root's incoming panel
+              if (inspectId && node.id !== inspectId) {
+                setInspect(null)
+                setIncoming([])
+                setEndpointFilter('all')
+              }
               setModalTab('overview')
               setSelected(node)
             }}
