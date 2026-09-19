@@ -335,9 +335,9 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                         <TraceWaterfall detail={detail} />
                         <div className="mt-4 flex gap-2">
                           <Button variant="primary" onClick={() => onSynthetic(t.traceId)}>
-                            Create Synthetic Test
+                            Create Testing Framework
                           </Button>
-                          <Button onClick={() => onAlerts(t.traceId)}>Create Alert Rules</Button>
+                          <Button onClick={() => onAlerts(t.traceId)}>Create Observability as Code</Button>
                         </div>
                       </>
                     )}
