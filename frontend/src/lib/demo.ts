@@ -1,6 +1,11 @@
 import type {
   AlertPlan,
   ApiOperation,
+  BlastRadius,
+  EndpointStat,
+  SafeguardOption,
+  SilentEdgeFinding,
+  TraceInvocation,
   ClusterDeployment,
   EdgeHealthStatus,
   ComponentGraph,
@@ -194,11 +199,13 @@ function buildHealthMap(centerName: string, rev?: string, maxDepth?: number): He
   const observedEdges = edges.filter((e) => e.observed).length
   const loggedEdges = edges.filter((e) => e.hasLogs).length
   const score = observedEdges === 0 ? 0 : Math.round((loggedEdges / observedEdges) * 100)
+  // mirrors backend CoverageScore.of: the verdict band is served, never client-judged
+  const band = score >= 90 ? ('good' as const) : score >= 60 ? ('warn' as const) : ('critical' as const)
   return {
     center,
     nodes,
     edges,
-    coverage: { loggedEdges, observedEdges, totalEdges: edges.length, score },
+    coverage: { loggedEdges, observedEdges, totalEdges: edges.length, score, band },
   }
 }
 
@@ -299,6 +306,7 @@ function buildTraceSummaries(
   rev?: string,
   earliest?: string,
   latest?: string,
+  edge?: string,
 ): TraceSummary[] {
   // traces are per-environment: each deployed revision has its own recent set.
   // Splunk semantics: the pool spans the last 7 days (cubed skew towards now, like real
@@ -315,6 +323,7 @@ function buildTraceSummaries(
     return {
       traceId,
       entryService: NAME_BY_ID.get(detail.spans[0].nodeId) ?? detail.spans[0].service,
+      entryNodeId: detail.spans[0].nodeId,
       startedAt,
       durationMs: detail.durationMs,
       status: detail.status,
@@ -325,6 +334,14 @@ function buildTraceSummaries(
     .filter((t) => {
       const s = Date.parse(t.startedAt)
       return s >= from && s <= to
+    })
+    .filter((t) => {
+      if (!edge) return true
+      // mirrors FlowUseCase: a trace crosses the edge when its entry point's route travels it
+      const origins = new Set(
+        FLOW_ROUTES.filter((r) => r.hops.some((h) => h.id === edge)).map((r) => r.origin),
+      )
+      return origins.has(t.entryNodeId)
     })
     .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
     .slice(0, limit)
@@ -865,6 +882,100 @@ function buildErrorRatePlan(component: string, target: string): EnhancementPlan 
   }
 }
 
+function buildBlastRadius(
+  component: string,
+  nodeId: string,
+  rev?: string,
+  maxDepth?: number,
+): BlastRadius {
+  // mirrors TopologyRules.blastRadius (+ withinDepth): transitive callers over reversed edges
+  const center = resolveCenter(component)
+  let edges = edgesFor(rev)
+  if (maxDepth != null) {
+    const adj = new Map<string, string[]>()
+    for (const e of edges) {
+      adj.set(e.source, [...(adj.get(e.source) ?? []), e.target])
+      adj.set(e.target, [...(adj.get(e.target) ?? []), e.source])
+    }
+    const depth = new Map<string, number>([[center, 0]])
+    let frontier = [center]
+    while (frontier.length > 0) {
+      const next: string[] = []
+      for (const id of frontier)
+        for (const nb of adj.get(id) ?? [])
+          if (!depth.has(nb) && depth.get(id)! < maxDepth) {
+            depth.set(nb, depth.get(id)! + 1)
+            next.push(nb)
+          }
+      frontier = next
+    }
+    edges = edges.filter((e) => depth.has(e.source) && depth.has(e.target))
+  }
+  const inTo = new Map<string, string[]>()
+  for (const e of edges) inTo.set(e.target, [...(inTo.get(e.target) ?? []), e.source])
+  const seen = new Set<string>([nodeId])
+  const stack = [nodeId]
+  while (stack.length) {
+    for (const caller of inTo.get(stack.pop()!) ?? []) {
+      if (!seen.has(caller)) {
+        seen.add(caller)
+        stack.push(caller)
+      }
+    }
+  }
+  return { nodeId, impactedNodeIds: [...seen] }
+}
+
+function buildTraceInvocation(traceId: string, nodeId: string): TraceInvocation {
+  const detail = buildTrace(traceId)
+  return { traceId, nodeId, invoked: detail.spans.some((sp) => sp.nodeId === nodeId) }
+}
+
+function buildEndpointStats(nodeId: string, windowMin: number): EndpointStat[] {
+  // mirrors MockObservabilityAdapter.endpointStats: deterministic per 2-minute bucket
+  const bucket = Math.floor(Date.now() / 120_000)
+  return (ENDPOINTS[nodeId] ?? []).map((ep) => {
+    const rand = seeded(`${nodeId}:${ep}:${windowMin}:${bucket}`)
+    return {
+      endpoint: ep,
+      calls: 20 + Math.floor(rand() * 400),
+      avgLatencyMs: 15 + Math.floor(rand() * 220),
+      errorRatePct: Math.round(rand() * 40) / 10,
+    }
+  })
+}
+
+function buildSilentEdgeFinding(sourceId: string, targetId: string): SilentEdgeFinding {
+  const source = NAME_BY_ID.get(sourceId) ?? sourceId
+  const target = NAME_BY_ID.get(targetId) ?? targetId
+  return {
+    summary:
+      'DeepWiki documents this dependency, yet SPLOC recorded zero calls across it in the live window. Either the calls aren\u2019t instrumented, or the code path is stale.',
+    meanings: [
+      {
+        title: 'Observability gap',
+        body: `The calls happen, but ${source} isn\u2019t propagating trace context on this path, so SPLOC never sees them.`,
+      },
+      {
+        title: 'Stale code',
+        body: 'The dependency exists in the repository but the path is never exercised anymore; the code (and the coupling) may be removable.',
+      },
+    ],
+    nextSteps: [
+      `Verify tracing instrumentation on ${source}\u2019s outbound client for ${target}.`,
+      'Run a synthetic through the path. If it appears on the map, it was an instrumentation gap.',
+      'If genuinely unused, remove the dependency and let the next DeepWiki run clear the edge.',
+    ],
+  }
+}
+
+const SAFEGUARD_CATALOG: SafeguardOption[] = [
+  { id: 'synthetic', group: 'testing', available: true },
+  { id: 'regression', group: 'testing', available: false },
+  { id: 'performance', group: 'testing', available: false },
+  { id: 'alerts', group: 'observability', available: true },
+]
+
 function buildWiki(nodeId: string): WikiDoc {
   const rand = seeded(nodeId + ':wiki')
   const spec = NODES.find((n) => n.id === nodeId)
@@ -981,24 +1092,31 @@ export const demo = {
   nodeEndpoints: (nodeId: string) => wait(buildEndpointFlows(nodeId)),
   nodeDeployments: (nodeId: string) => wait(buildDeployments(nodeId)),
   nodeOpenApi: (nodeId: string): Promise<ApiOperation[]> => wait(buildOpenApi(nodeId)),
-  traces: (component: string, limit: number, rev?: string, earliest?: string, latest?: string) =>
-    wait(buildTraceSummaries(component, limit, rev, earliest, latest)),
+  traces: (component: string, limit: number, rev?: string, earliest?: string, latest?: string, edge?: string) =>
+    wait(buildTraceSummaries(component, limit, rev, earliest, latest, edge)),
+  traceInvokes: (traceId: string, nodeId: string) => wait(buildTraceInvocation(traceId, nodeId)),
+  blastRadius: (component: string, nodeId: string, rev?: string, maxDepth?: number) =>
+    wait(buildBlastRadius(component, nodeId, rev, maxDepth)),
+  endpointStats: (nodeId: string, windowMin = 15) => wait(buildEndpointStats(nodeId, windowMin)),
+  silentEdgeFinding: (_component: string, sourceId: string, targetId: string) =>
+    wait(buildSilentEdgeFinding(sourceId, targetId)),
+  safeguardCatalog: () => wait(SAFEGUARD_CATALOG),
   trace: (traceId: string) => wait(buildTrace(traceId)),
   flows: (_component: string, _rev?: string) => wait(buildFlows()),
   revisions: (component: string): Promise<RepoRevisions> => {
     const repo = `registry.internal/${slug(component)}`
     return wait({
       environments: [
-        { env: 'prod', commitHash: '9f8e7d6', image: `${repo}:1.24.0` },
-        { env: 'test', commitHash: 'e4f5a6b', image: `${repo}:test-e4f5a6b` },
-        { env: 'dev', commitHash: 'a1b2c3d', image: `${repo}:dev-a1b2c3d` },
+        { env: 'prod', commitHash: '9f8e7d6', image: `${repo}:1.24.0`, running: true },
+        { env: 'test', commitHash: 'e4f5a6b', image: `${repo}:test-e4f5a6b`, running: true },
+        { env: 'dev', commitHash: 'a1b2c3d', image: `${repo}:dev-a1b2c3d`, running: true },
       ],
       commits: [
-        { hash: '3c1aa90', message: 'wip: batch-evaluate concurrency', deployedEnv: null },
-        { hash: 'a1b2c3d', message: 'feat: sandbox OPA policy cache', deployedEnv: 'dev' },
-        { hash: 'e4f5a6b', message: 'fix: null policy-bundle handling', deployedEnv: 'test' },
-        { hash: '9f8e7d6', message: 'release: guardrails 1.24.0', deployedEnv: 'prod' },
-        { hash: '77d0c12', message: 'chore: bump spring-boot 3.4.1', deployedEnv: null },
+        { hash: '3c1aa90', message: 'wip: batch-evaluate concurrency', deployedEnv: null, running: false },
+        { hash: 'a1b2c3d', message: 'feat: sandbox OPA policy cache', deployedEnv: 'dev', running: true },
+        { hash: 'e4f5a6b', message: 'fix: null policy-bundle handling', deployedEnv: 'test', running: true },
+        { hash: '9f8e7d6', message: 'release: guardrails 1.24.0', deployedEnv: 'prod', running: true },
+        { hash: '77d0c12', message: 'chore: bump spring-boot 3.4.1', deployedEnv: null, running: false },
       ],
     })
   },

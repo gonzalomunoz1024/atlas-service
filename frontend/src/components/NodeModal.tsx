@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ApiOperation, ClusterDeployment, ComponentNode, HealthEdge, WikiDoc } from '../types/atlas'
+import type { ApiOperation, ClusterDeployment, ComponentNode, HealthEdge, NodeMetrics, WikiDoc } from '../types/atlas'
 import { api } from '../lib/api'
 import { EDGE_KIND_LABEL, EVIDENCE_LABEL, HEALTH_COLOR_VAR, LINK_COLOR_VAR, LINK_LABEL, NODE_LABEL } from '../lib/nodeVisuals'
 import { NodeGlyph } from './NodeGlyph'
@@ -33,19 +33,28 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
   const [wikiPage, setWikiPage] = useState(0)
   const [spec, setSpec] = useState<ApiOperation[] | null>(null)
   const [deployments, setDeployments] = useState<ClusterDeployment[] | null>(null)
+  const [metrics, setMetrics] = useState<NodeMetrics | null>(null)
 
   // prefetch the OpenAPI spec so the tab only appears when the repo has one
   useEffect(() => {
     api.nodeOpenApi(component, node.id).then(setSpec).catch(() => setSpec([]))
   }, [component, node.id])
 
-  // apps run on OCP clusters; only they get the Deployment tab (and the Overview summary)
-  const isApp = node.kind === 'service' || node.kind === 'external'
+  // deployments prefetch for every node — the backend decides who runs on OCP (empty
+  // for infra), and the tab simply follows the data, like the OpenAPI tab does
   useEffect(() => {
-    if (isApp) {
-      api.nodeDeployments(component, node.id).then(setDeployments).catch(() => setDeployments([]))
+    api.nodeDeployments(component, node.id).then(setDeployments).catch(() => setDeployments([]))
+  }, [component, node.id])
+  const hasDeployments = (deployments?.length ?? 0) > 0
+
+  // node stats are served (Grafana), not summed client-side over edges
+  useEffect(() => {
+    if (running) {
+      api.nodeMetrics(component, node.id).then(setMetrics).catch(() => setMetrics(null))
     }
-  }, [isApp, component, node.id])
+  }, [running, component, node.id])
+  const latest = (pts?: { value: number }[]) =>
+    pts && pts.length > 0 ? pts[pts.length - 1].value : undefined
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id)
   const missingLog = running && related.some((e) => e.linkStatus === 'missing_logs')
@@ -67,7 +76,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
 
       {/* tabs */}
       <div className="flex gap-1 px-5 pt-3">
-        {(['overview', ...(isApp ? (['deploy'] as Tab[]) : []), 'wiki', ...(spec && spec.length > 0 ? (['api'] as Tab[]) : [])] as Tab[]).map((t) => (
+        {(['overview', ...(hasDeployments ? (['deploy'] as Tab[]) : []), 'wiki', ...(spec && spec.length > 0 ? (['api'] as Tab[]) : [])] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -89,11 +98,17 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               <div>
                 <div className="grid grid-cols-3 gap-3">
                   <Stat label="Connections" value={String(related.length)} />
-                  <Stat label="Calls / Min" value={related.reduce((a, e) => a + e.callsPerMin, 0).toLocaleString()} />
-                  <Stat label="Max p95" value={`${Math.max(0, ...related.map((e) => e.p95LatencyMs))}ms`} />
+                  <Stat
+                    label="Calls / Min"
+                    value={latest(metrics?.requestRate)?.toLocaleString() ?? '…'}
+                  />
+                  <Stat
+                    label="p95 Latency"
+                    value={latest(metrics?.p95Latency) != null ? `${Math.round(latest(metrics!.p95Latency)!)}ms` : '…'}
+                  />
                 </div>
                 <p className="mt-1.5 text-caption2 text-tertiary">
-                  Connections from DeepWiki · Calls / Min &amp; Max p95 from SPLOC caller-side spans
+                  Connections from DeepWiki · Calls / Min &amp; p95 from Grafana
                 </p>
               </div>
             ) : (
@@ -142,7 +157,7 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
               </ul>
             </div>
 
-            {isApp && deployments && deployments.length > 0 && (
+            {hasDeployments && deployments && (
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-primary">Deployed On</h3>
                 <div className="flex flex-wrap gap-2">

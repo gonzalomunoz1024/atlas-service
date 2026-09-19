@@ -87,6 +87,41 @@ export interface AlertPlan {
   rules: AlertRule[]
 }
 
+/** What a failure at a node would hurt: its transitive callers (self included). */
+export interface BlastRadius {
+  nodeId: string
+  impactedNodeIds: string[]
+}
+
+/** Whether a trace's call path passes through a node (safeguard eligibility). */
+export interface TraceInvocation {
+  traceId: string
+  nodeId: string
+  invoked: boolean
+}
+
+/** Windowed traffic stats for one REST endpoint of a node. */
+export interface EndpointStat {
+  endpoint: string
+  calls: number
+  avgLatencyMs: number
+  errorRatePct: number
+}
+
+/** The case file for a mapped-but-silent link. */
+export interface SilentEdgeFinding {
+  summary: string
+  meanings: { title: string; body: string }[]
+  nextSteps: string[]
+}
+
+/** One safeguard kind the platform can (or will) generate from a trace. */
+export interface SafeguardOption {
+  id: string
+  group: 'testing' | 'observability'
+  available: boolean
+}
+
 /** Server-judged live edge health: windowed error rate vs the configured threshold. */
 export interface EdgeHealthStatus {
   edgeId: string
@@ -95,6 +130,8 @@ export interface EdgeHealthStatus {
 }
 
 export interface CoverageScore {
+  /** server-judged verdict band: good | warn | critical */
+  band: 'good' | 'warn' | 'critical'
   loggedEdges: number
   observedEdges: number
   totalEdges: number
@@ -138,6 +175,7 @@ export interface DeployEnvironment {
   env: string
   commitHash: string
   image: string
+  running: boolean
 }
 
 /** A recent commit; `deployedEnv` names the environment running it, or null if none. */
@@ -145,9 +183,12 @@ export interface CommitRef {
   hash: string
   message: string
   deployedEnv: string | null
+  /** server-declared: something is running this commit (drives all live-data gating) */
+  running: boolean
 }
 
 /** Revisions a repo's map can be viewed at: deployed environments + recent commits. */
+/** Server-declared: whether a revision is running anywhere (drives all live-data gating). */
 export interface RepoRevisions {
   environments: DeployEnvironment[]
   commits: CommitRef[]
@@ -193,6 +234,7 @@ export interface Span {
 export interface TraceSummary {
   traceId: string
   entryService: string
+  entryNodeId: string
   startedAt: string
   durationMs: number
   status: SpanStatus

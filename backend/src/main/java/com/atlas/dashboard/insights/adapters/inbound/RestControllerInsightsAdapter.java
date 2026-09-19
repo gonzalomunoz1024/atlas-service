@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.atlas.dashboard.insights.application.HealthMapUseCase;
 import com.atlas.dashboard.insights.domain.EdgeHealthStatus;
+import com.atlas.dashboard.insights.domain.EndpointStat;
 import com.atlas.dashboard.insights.domain.HealthMap;
 import com.atlas.dashboard.insights.ports.inbound.InsightsInboundPort;
 
@@ -27,6 +28,14 @@ public class RestControllerInsightsAdapter implements InsightsInboundPort {
             @RequestParam(required = false) String rev,
             @RequestParam(required = false) Integer maxDepth) {
         return useCase.healthMap(component, rev, maxDepth);
+    }
+
+    @Override
+    @GetMapping("/components/{component}/nodes/{nodeId}/endpoint-stats")
+    public Mono<java.util.List<EndpointStat>> endpointStats(@PathVariable String component,
+            @PathVariable String nodeId,
+            @RequestParam(defaultValue = "15") int windowMin) {
+        return useCase.endpointStats(component, nodeId, windowMin);
     }
 
     @Override

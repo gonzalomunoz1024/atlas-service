@@ -7,7 +7,7 @@ const CIRC = 2 * Math.PI * R
  * Apple-Watch-style activity ring for logging coverage. Pure SVG — the
  * ObservabilityMenu composes it into a row. Animates closed on mount.
  */
-export function CoverageRing({ score, size = 22 }: { score: number; size?: number }) {
+export function CoverageRing({ score, band, size = 22 }: { score: number; band: 'good' | 'warn' | 'critical'; size?: number }) {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
@@ -15,8 +15,9 @@ export function CoverageRing({ score, size = 22 }: { score: number; size?: numbe
     return () => clearTimeout(t)
   }, [score])
 
+  // the verdict band is judged server-side; the ring only maps it to a colour
   const color =
-    score >= 90 ? 'var(--color-neutral)' : score >= 60 ? 'var(--color-warning)' : 'var(--color-critical)'
+    band === 'good' ? 'var(--color-neutral)' : band === 'warn' ? 'var(--color-warning)' : 'var(--color-critical)'
 
   return (
     <svg width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">

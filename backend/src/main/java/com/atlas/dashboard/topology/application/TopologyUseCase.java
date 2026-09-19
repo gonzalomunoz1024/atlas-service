@@ -4,8 +4,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import java.util.Set;
+
+import com.atlas.dashboard.common.domain.NodeKind;
 import com.atlas.dashboard.common.domain.NodeKindRule;
+import com.atlas.dashboard.common.domain.TopologyRules;
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.BlastRadius;
 import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
@@ -72,6 +77,32 @@ public class TopologyUseCase implements TopologyInboundPort {
 
     @Override
     public Mono<List<ClusterDeployment>> deployments(String component, String nodeId) {
-        return openShift.deployments(nodeId);
+        // Atlas's rule, not the mock's: only application nodes run on OCP — topics and stores
+        // are managed infra, whatever the cluster inventory would say
+        return deepWiki.graph(component, null)
+                .flatMap(g -> g.nodes().stream()
+                        .filter(n -> n.id().equals(nodeId))
+                        .findFirst()
+                        .filter(n -> {
+                            NodeKind kind = NodeKindRule.effective(n.kind(), n.owned());
+                            return kind == NodeKind.SERVICE || kind == NodeKind.EXTERNAL;
+                        })
+                        .map(n -> openShift.deployments(nodeId))
+                        .orElse(Mono.just(List.of())));
+    }
+
+    @Override
+    public Mono<BlastRadius> blastRadius(String component, String nodeId, String rev, Integer maxDepth) {
+        // the traversal is a domain rule (TopologyRules); depth keeps the count honest to the view
+        return deepWiki.graph(component, rev).map(g -> {
+            var edges = g.edges();
+            if (maxDepth != null) {
+                Set<String> keep = TopologyRules.withinDepth(g.center(), edges, maxDepth);
+                edges = edges.stream()
+                        .filter(e -> keep.contains(e.source()) && keep.contains(e.target()))
+                        .toList();
+            }
+            return new BlastRadius(nodeId, List.copyOf(TopologyRules.blastRadius(nodeId, edges)));
+        });
     }
 }

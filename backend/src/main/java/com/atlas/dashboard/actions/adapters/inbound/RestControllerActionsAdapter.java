@@ -9,7 +9,13 @@ import org.springframework.web.bind.annotation.RestController;
 import com.atlas.dashboard.actions.application.ActionsUseCase;
 import com.atlas.dashboard.actions.domain.AlertPlan;
 import com.atlas.dashboard.actions.domain.EnhancementPlan;
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+
 import com.atlas.dashboard.actions.domain.GeneratedTest;
+import com.atlas.dashboard.actions.domain.SafeguardOption;
+import com.atlas.dashboard.actions.domain.SilentEdgeFinding;
 import com.atlas.dashboard.actions.domain.TestType;
 import com.atlas.dashboard.actions.ports.inbound.ActionsInboundPort;
 
@@ -47,6 +53,19 @@ public class RestControllerActionsAdapter implements ActionsInboundPort {
     public Mono<AlertPlan> alertsFromTrace(@RequestParam String component,
             @PathVariable String traceId) {
         return useCase.alertsFromTrace(component, traceId);
+    }
+
+    @Override
+    @PostMapping("/enhancements/{component}/silent-edge")
+    public Mono<SilentEdgeFinding> silentEdgeFinding(@PathVariable String component,
+            @RequestParam String source, @RequestParam String target) {
+        return useCase.silentEdgeFinding(component, source, target);
+    }
+
+    @Override
+    @GetMapping("/safeguards/catalog")
+    public Mono<List<SafeguardOption>> safeguardCatalog() {
+        return useCase.safeguardCatalog();
     }
 
     @Override

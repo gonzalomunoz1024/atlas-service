@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { api } from '../lib/api'
+import type { SafeguardOption } from '../types/atlas'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon, type IconName } from './ui/Icons'
 import { IconButton } from './ui/Button'
@@ -19,41 +22,49 @@ interface Card {
   soon?: boolean
 }
 
-const TESTING: Card[] = [
-  {
+/** Presentation for each catalog id — copy and glyphs are the UI's; availability is the server's. */
+const CARD_COPY: Record<string, Omit<Card, 'soon'>> = {
+  synthetic: {
     icon: 'pulse',
     title: 'Synthetic Test',
     description: 'Replay this request on HyperExecute and assert a 200 under 800ms.',
     kind: 'synthetic',
   },
-  {
+  regression: {
     icon: 'flask',
     title: 'Regression Test',
     description: 'Pin today’s behaviour and fail the build the moment this path drifts.',
-    soon: true,
   },
-  {
+  performance: {
     icon: 'gauge',
     title: 'Performance Test',
     description: 'Load the path at multiples of live traffic and watch the p95 hold.',
-    soon: true,
   },
-]
-
-const OBSERVABILITY: Card[] = [
-  {
+  alerts: {
     icon: 'doc',
     title: 'Alert Manifest',
     description: 'Splunk & SPLOC rules derived from this call path, as reviewable YAML.',
     kind: 'alerts',
   },
-]
+}
+
+function toCards(catalog: SafeguardOption[], group: SafeguardOption['group']): Card[] {
+  return catalog
+    .filter((o) => o.group === group && CARD_COPY[o.id])
+    .map((o) => ({ ...CARD_COPY[o.id], soon: !o.available }))
+}
 
 /**
  * The safeguard chooser: one trace becomes lasting protection: tests that replay it,
  * alerts that watch it. Picking an available card opens that artifact's generator.
  */
 export function SafeguardsModal({ traceId, onPick, onClose }: Props) {
+  // which kinds exist and are available is the platform's catalog, not UI knowledge
+  const [catalog, setCatalog] = useState<SafeguardOption[] | null>(null)
+  useEffect(() => {
+    api.safeguardCatalog().then(setCatalog).catch(() => setCatalog([]))
+  }, [])
+
   return (
     <Modal onClose={onClose} raised width="max-w-2xl">
       <Header traceId={traceId} />
@@ -63,8 +74,12 @@ export function SafeguardsModal({ traceId, onPick, onClose }: Props) {
           alerts that watch it in production.
         </p>
 
-        <Section label="Testing Framework" cards={TESTING} onPick={onPick} />
-        <Section label="Observability as Code" cards={OBSERVABILITY} onPick={onPick} />
+        {catalog && (
+          <>
+            <Section label="Testing Framework" cards={toCards(catalog, 'testing')} onPick={onPick} />
+            <Section label="Observability as Code" cards={toCards(catalog, 'observability')} onPick={onPick} />
+          </>
+        )}
       </div>
     </Modal>
   )

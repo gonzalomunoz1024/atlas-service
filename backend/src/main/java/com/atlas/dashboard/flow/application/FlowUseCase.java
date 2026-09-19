@@ -23,6 +23,7 @@ import com.atlas.dashboard.flow.domain.FlowEvent;
 import com.atlas.dashboard.flow.domain.FlowRoute;
 import com.atlas.dashboard.flow.domain.Span;
 import com.atlas.dashboard.flow.domain.TraceDetail;
+import com.atlas.dashboard.flow.domain.TraceInvocation;
 import com.atlas.dashboard.flow.domain.TraceSummary;
 import com.atlas.dashboard.flow.ports.inbound.FlowInboundPort;
 import com.atlas.dashboard.flow.ports.outbound.FlowTopologyPort;
@@ -52,8 +53,29 @@ public class FlowUseCase implements FlowInboundPort {
     }
 
     @Override
-    public Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest, String latest) {
-        return sploc.recentTraces(component, Math.max(1, Math.min(limit, 50)), rev, earliest, latest);
+    public Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest,
+            String latest, String edge) {
+        Flux<TraceSummary> base =
+                sploc.recentTraces(component, Math.max(1, Math.min(limit, 50)), rev, earliest, latest);
+        if (edge == null || edge.isBlank()) {
+            return base;
+        }
+        // trace-edge membership is OUR rule: a trace crosses the edge when it begins at an entry
+        // point whose flow route travels that hop (the same membership /flows serves the map)
+        Set<String> origins = new HashSet<>();
+        for (Route route : buildRoutes(component, rev)) {
+            if (route.hops().stream().anyMatch(h -> h.id().equals(edge))) {
+                origins.add(route.origin());
+            }
+        }
+        return base.filter(t -> origins.contains(t.entryNodeId()));
+    }
+
+    @Override
+    public Mono<TraceInvocation> invokes(String traceId, String nodeId) {
+        return sploc.spans(traceId)
+                .map(d -> new TraceInvocation(traceId, nodeId,
+                        d.spans().stream().anyMatch(s -> nodeId.equals(s.nodeId()))));
     }
 
     @Override

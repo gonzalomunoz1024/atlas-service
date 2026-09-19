@@ -33,7 +33,8 @@ public class MockSplocAdapter implements SplocPort {
     private final Clock clock;
 
     @Override
-    public Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest, String latest) {
+    public Flux<TraceSummary> recentTraces(String component, int limit, String rev, String earliest,
+            String latest) {
         // traces are per-environment: each deployed revision has its own recent set.
         // Splunk semantics: the pool spans the last 7 days (cubed skew towards now, like real
         // traffic), and the earliest/latest window filters it server-side before the limit.
@@ -52,6 +53,7 @@ public class MockSplocAdapter implements SplocPort {
             pool.add(new TraceSummary(
                     traceId,
                     entryServiceName(b.spans().get(0).nodeId()),
+                    b.spans().get(0).nodeId(),
                     startedAt.toString(),
                     b.durationMs(),
                     b.status(),

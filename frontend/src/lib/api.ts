@@ -1,6 +1,11 @@
 import type {
   AlertPlan,
   ApiOperation,
+  BlastRadius,
+  EndpointStat,
+  SafeguardOption,
+  SilentEdgeFinding,
+  TraceInvocation,
   ClusterDeployment,
   EdgeHealthStatus,
   ComponentGraph,
@@ -84,16 +89,55 @@ export const api = {
       ? demo.nodeEndpoints(nodeId)
       : get(`/v1/components/${encodeURIComponent(name)}/nodes/${encodeURIComponent(nodeId)}/endpoints`),
 
-  /** earliest/latest are Splunk time modifiers ("-15m", "now", ISO instant) — the query is Splunk's. */
-  traces: (component: string, limit = 12, rev?: string, earliest?: string, latest?: string): Promise<TraceSummary[]> =>
+  /** earliest/latest are Splunk time modifiers; edge scopes to traces crossing that hop (server rule). */
+  traces: (component: string, limit = 12, rev?: string, earliest?: string, latest?: string, edge?: string): Promise<TraceSummary[]> =>
     DEMO_MODE
-      ? demo.traces(component, limit, rev, earliest, latest)
+      ? demo.traces(component, limit, rev, earliest, latest, edge)
       : get(
           `/v1/traces?component=${encodeURIComponent(component)}&limit=${limit}` +
             (rev ? `&rev=${encodeURIComponent(rev)}` : '') +
             (earliest ? `&earliest=${encodeURIComponent(earliest)}` : '') +
-            (latest ? `&latest=${encodeURIComponent(latest)}` : ''),
+            (latest ? `&latest=${encodeURIComponent(latest)}` : '') +
+            (edge ? `&edge=${encodeURIComponent(edge)}` : ''),
         ),
+
+  /** Whether a trace's call path passes through a node — the safeguard eligibility fact. */
+  traceInvokes: (traceId: string, nodeId: string): Promise<TraceInvocation> =>
+    DEMO_MODE
+      ? demo.traceInvokes(traceId, nodeId)
+      : get(`/v1/traces/${encodeURIComponent(traceId)}/invokes/${encodeURIComponent(nodeId)}`),
+
+  /** Transitive callers a failure at the node would hurt, scoped to the viewed depth. */
+  blastRadius: (component: string, nodeId: string, rev?: string, maxDepth?: number): Promise<BlastRadius> => {
+    if (DEMO_MODE) return demo.blastRadius(component, nodeId, rev, maxDepth)
+    const params = new URLSearchParams()
+    if (rev) params.set('rev', rev)
+    if (maxDepth != null) params.set('maxDepth', String(maxDepth))
+    const q = params.toString()
+    return get(
+      `/v1/components/${encodeURIComponent(component)}/nodes/${encodeURIComponent(nodeId)}/blast-radius${q ? `?${q}` : ''}`,
+    )
+  },
+
+  /** Windowed per-endpoint traffic stats for a node — served, never client-derived. */
+  endpointStats: (component: string, nodeId: string, windowMin = 15): Promise<EndpointStat[]> =>
+    DEMO_MODE
+      ? demo.endpointStats(nodeId, windowMin)
+      : get(
+          `/v1/components/${encodeURIComponent(component)}/nodes/${encodeURIComponent(nodeId)}/endpoint-stats?windowMin=${windowMin}`,
+        ),
+
+  /** The case file for a mapped-but-silent link. */
+  silentEdgeFinding: (component: string, sourceId: string, targetId: string): Promise<SilentEdgeFinding> =>
+    DEMO_MODE
+      ? demo.silentEdgeFinding(component, sourceId, targetId)
+      : post(
+          `/v1/enhancements/${encodeURIComponent(component)}/silent-edge?source=${encodeURIComponent(sourceId)}&target=${encodeURIComponent(targetId)}`,
+        ),
+
+  /** Which safeguard kinds the platform can generate today (and which are coming). */
+  safeguardCatalog: (): Promise<SafeguardOption[]> =>
+    DEMO_MODE ? demo.safeguardCatalog() : get('/v1/safeguards/catalog'),
 
   trace: (traceId: string): Promise<TraceDetail> =>
     DEMO_MODE ? demo.trace(traceId) : get(`/v1/traces/${encodeURIComponent(traceId)}`),

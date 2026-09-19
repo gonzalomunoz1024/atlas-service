@@ -91,4 +91,53 @@ public final class TopologyRules {
         }
         return new ArrayList<>(collected);
     }
+
+    /**
+     * Everything a failure at {@code nodeId} would hurt: the transitive closure of its CALLERS,
+     * walked over reversed edges (source→target = "source depends on target"). Includes the node
+     * itself.
+     */
+    public static Set<String> blastRadius(String nodeId, Collection<DependencyEdge> edges) {
+        Map<String, List<String>> inTo = new HashMap<>();
+        for (DependencyEdge e : edges) {
+            inTo.computeIfAbsent(e.target(), k -> new ArrayList<>()).add(e.source());
+        }
+        Set<String> seen = new LinkedHashSet<>();
+        seen.add(nodeId);
+        Deque<String> stack = new ArrayDeque<>();
+        stack.push(nodeId);
+        while (!stack.isEmpty()) {
+            for (String caller : inTo.getOrDefault(stack.pop(), List.of())) {
+                if (seen.add(caller)) {
+                    stack.push(caller);
+                }
+            }
+        }
+        return seen;
+    }
+
+    /** Node ids within {@code maxDepth} undirected hops of {@code centerId}. */
+    public static Set<String> withinDepth(String centerId, Collection<DependencyEdge> edges, int maxDepth) {
+        Map<String, List<String>> adj = new HashMap<>();
+        for (DependencyEdge e : edges) {
+            adj.computeIfAbsent(e.source(), k -> new ArrayList<>()).add(e.target());
+            adj.computeIfAbsent(e.target(), k -> new ArrayList<>()).add(e.source());
+        }
+        Map<String, Integer> depth = new HashMap<>();
+        depth.put(centerId, 0);
+        List<String> frontier = List.of(centerId);
+        while (!frontier.isEmpty()) {
+            List<String> next = new ArrayList<>();
+            for (String id : frontier) {
+                for (String nb : adj.getOrDefault(id, List.of())) {
+                    if (!depth.containsKey(nb) && depth.get(id) < maxDepth) {
+                        depth.put(nb, depth.get(id) + 1);
+                        next.add(nb);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        return depth.keySet();
+    }
 }

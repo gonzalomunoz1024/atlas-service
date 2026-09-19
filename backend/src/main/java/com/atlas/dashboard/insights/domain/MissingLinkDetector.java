@@ -59,7 +59,7 @@ public final class MissingLinkDetector {
         int observed = (int) edges.stream().filter(HealthEdge::observed).count();
         int logged = (int) edges.stream().filter(HealthEdge::hasLogs).count();
         int score = observed == 0 ? 0 : Math.round((logged * 100f) / observed);
-        return new CoverageScore(logged, observed, edges.size(), score);
+        return CoverageScore.of(logged, observed, edges.size(), score);
     }
 
     /** Edges worth flagging to the user, worst first (missing logs before silent). */

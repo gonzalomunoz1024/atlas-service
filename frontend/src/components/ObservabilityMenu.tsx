@@ -51,7 +51,7 @@ export function ObservabilityMenu({ coverage, onCoverage, onTraces, onOverview }
               onClick={pick(onCoverage)}
               className="flex w-full items-center gap-2.5 border-b border-stroke-light px-4 py-2.5 text-left transition-colors hover:bg-surface-secondary"
             >
-              <CoverageRing score={coverage.score} />
+              <CoverageRing score={coverage.score} band={coverage.band} />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm text-primary">Logging Coverage</span>
                 <span className="block text-caption2 text-tertiary">

@@ -65,15 +65,15 @@ public class MockDeepWikiAdapter implements DeepWikiPort {
             String repo = "registry.internal/" + fixture.slug(component);
             String dev = fixture.devCommit();
             var environments = List.of(
-                    new RepoRevisions.Environment("prod", "9f8e7d6", repo + ":1.24.0"),
-                    new RepoRevisions.Environment("test", "e4f5a6b", repo + ":test-e4f5a6b"),
-                    new RepoRevisions.Environment("dev", dev, repo + ":dev-" + dev));
+                    new RepoRevisions.Environment("prod", "9f8e7d6", repo + ":1.24.0", true),
+                    new RepoRevisions.Environment("test", "e4f5a6b", repo + ":test-e4f5a6b", true),
+                    new RepoRevisions.Environment("dev", dev, repo + ":dev-" + dev, true));
             var commits = List.of(
-                    new RepoRevisions.CommitRef("3c1aa90", "wip: batch-evaluate concurrency", null),
-                    new RepoRevisions.CommitRef(dev, "feat: sandbox OPA policy cache", "dev"),
-                    new RepoRevisions.CommitRef("e4f5a6b", "fix: null policy-bundle handling", "test"),
-                    new RepoRevisions.CommitRef("9f8e7d6", "release: guardrails 1.24.0", "prod"),
-                    new RepoRevisions.CommitRef("77d0c12", "chore: bump spring-boot 3.4.1", null));
+                    new RepoRevisions.CommitRef("3c1aa90", "wip: batch-evaluate concurrency", null, false),
+                    new RepoRevisions.CommitRef(dev, "feat: sandbox OPA policy cache", "dev", true),
+                    new RepoRevisions.CommitRef("e4f5a6b", "fix: null policy-bundle handling", "test", true),
+                    new RepoRevisions.CommitRef("9f8e7d6", "release: guardrails 1.24.0", "prod", true),
+                    new RepoRevisions.CommitRef("77d0c12", "chore: bump spring-boot 3.4.1", null, false));
             return new RepoRevisions(environments, commits);
         });
     }

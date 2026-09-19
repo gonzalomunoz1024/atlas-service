@@ -30,7 +30,7 @@ export function EnvironmentSelector({ revisions, view, onChange }: Props) {
   if (!revisions || !view) return null
 
   const pickEnv = (env: RepoRevisions['environments'][number]) => {
-    onChange({ label: env.env, commitHash: env.commitHash, image: env.image, running: true })
+    onChange({ label: env.env, commitHash: env.commitHash, image: env.image, running: env.running })
     close()
   }
   const pickCommit = (c: RepoRevisions['commits'][number]) => {
@@ -41,7 +41,7 @@ export function EnvironmentSelector({ revisions, view, onChange }: Props) {
       label: deployed ? deployed.env : c.hash,
       commitHash: c.hash,
       image: deployed?.image ?? null,
-      running: !!deployed,
+      running: c.running,
     })
     close()
   }

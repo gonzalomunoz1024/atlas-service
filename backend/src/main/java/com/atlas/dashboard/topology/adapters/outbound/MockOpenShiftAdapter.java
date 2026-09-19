@@ -6,7 +6,6 @@ import java.util.Random;
 import org.springframework.stereotype.Component;
 
 import com.atlas.dashboard.common.TopologyFixture;
-import com.atlas.dashboard.common.domain.NodeKind;
 import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.ports.outbound.OpenShiftPort;
 
@@ -28,11 +27,10 @@ public class MockOpenShiftAdapter implements OpenShiftPort {
 
     @Override
     public Mono<List<ClusterDeployment>> deployments(String nodeId) {
-        // Only application nodes run on OCP — topics and stores are managed infra. Placement is
-        // deterministic per app: prod runs on two clusters, test and dev each on one.
+        // Placement is deterministic per app: prod runs on two clusters, test and dev each on
+        // one. (Which nodes count as apps is the use case's rule, not this mock's.)
         return Mono.fromSupplier(() -> {
-            var spec = fixture.spec(nodeId);
-            if (spec == null || !(spec.kind() == NodeKind.SERVICE || spec.kind() == NodeKind.EXTERNAL)) {
+            if (fixture.spec(nodeId) == null) {
                 return List.of();
             }
             Random r = new Random((nodeId + ":ocp").hashCode());

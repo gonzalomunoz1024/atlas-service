@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
-import type { TraceDetail } from '../types/atlas'
+import type { EndpointStat, TraceDetail } from '../types/atlas'
 import type { IncomingTrace } from './IncomingTracesPanel'
 import { Modal, useOverlayClose } from './ui/Overlay'
 import { Icon } from './ui/Icons'
@@ -10,29 +10,30 @@ import { Skeleton } from './ui/Skeleton'
 import { TraceWaterfall } from './TraceWaterfall'
 
 interface Props {
+  component: string
+  /** the node the call arrived at — endpoint stats are served for it, never tab-derived */
+  nodeId: string
   call: IncomingTrace
-  /** the full live buffer, for endpoint-level aggregate metrics */
-  recent: IncomingTrace[]
   onClose: () => void
   onSafeguards: (traceId: string, endpoint?: string) => void
 }
 
-/** Detail popup for one observed incoming call: metrics, trace waterfall + logs, synthetic action. */
-export function CallDetailModal({ call, recent, onClose, onSafeguards }: Props) {
+/** Detail popup for one observed incoming call: metrics, trace waterfall + logs, safeguard action. */
+export function CallDetailModal({ component, nodeId, call, onClose, onSafeguards }: Props) {
   const [detail, setDetail] = useState<TraceDetail | null>(null)
+  const [stat, setStat] = useState<EndpointStat | null>(null)
 
   useEffect(() => {
     api.trace(call.traceId).then(setDetail).catch(() => setDetail(null))
   }, [call.traceId])
 
-  // endpoint-level aggregates over the live window
-  const agg = useMemo(() => {
-    const same = call.endpoint ? recent.filter((t) => t.endpoint === call.endpoint) : recent
-    const n = same.length || 1
-    const errors = same.filter((t) => t.status === 'error').length
-    const avg = Math.round(same.reduce((a, t) => a + t.latencyMs, 0) / n)
-    return { calls: same.length, avg, errorPct: ((errors / n) * 100).toFixed(1) }
-  }, [call.endpoint, recent])
+  // endpoint metrics come from the observability backend's window, not this tab's buffer
+  useEffect(() => {
+    api
+      .endpointStats(component, nodeId)
+      .then((rows) => setStat(rows.find((r) => r.endpoint === call.endpoint) ?? null))
+      .catch(() => setStat(null))
+  }, [component, nodeId, call.endpoint])
 
   return (
     <Modal onClose={onClose} width="max-w-3xl">
@@ -42,10 +43,13 @@ export function CallDetailModal({ call, recent, onClose, onSafeguards }: Props) 
         {/* this call + endpoint-level metrics over the live window */}
         <div className="grid grid-cols-4 gap-3">
           <Stat label="This Call" value={`${call.latencyMs}ms`} />
-          <Stat label={`Avg Latency (${agg.calls} seen)`} value={`${agg.avg}ms`} />
-          <Stat label="Error Rate (Live Window)" value={`${agg.errorPct}%`} />
+          <Stat label="Avg Latency (15m)" value={stat ? `${stat.avgLatencyMs}ms` : '…'} />
+          <Stat label="Error Rate (15m)" value={stat ? `${stat.errorRatePct.toFixed(1)}%` : '…'} />
           <Stat label="Received" value={new Date(call.ts).toLocaleTimeString()} />
         </div>
+        <p className="mt-1.5 text-caption2 text-tertiary">
+          Windowed endpoint stats from SPLOC; only This Call and Received are from this session.
+        </p>
 
         <div className="mt-5">
           <h3 className="mb-2 text-sm font-semibold text-primary">Trace &amp; Logs</h3>

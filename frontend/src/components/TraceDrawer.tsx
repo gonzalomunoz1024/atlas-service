@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
-import type { EnhancementPlan, TraceDetail, TraceSummary, WikiDoc } from '../types/atlas'
+import type { EnhancementPlan, SilentEdgeFinding, TraceDetail, TraceSummary, WikiDoc } from '../types/atlas'
 import { Drawer, useOverlayClose } from './ui/Overlay'
 import { TraceWaterfall } from './TraceWaterfall'
 import { Icon } from './ui/Icons'
@@ -29,6 +29,7 @@ export type EdgeFix =
       sourceName: string
       targetName: string
       sourceId: string
+      targetId: string
       edgeKindLabel: string
     }
 
@@ -44,8 +45,8 @@ interface Props {
   fix?: EdgeFix
   /** how logs prove this edge's traffic (healthy grey edges) */
   evidenceNote?: string
-  /** Restrict the list to these entry-service names (e.g. traces crossing a clicked edge). */
-  restrictSources?: string[]
+  /** Scope the Splunk query to traces crossing this edge (membership judged server-side). */
+  edge?: string
   /** Services currently on the map (node-depth setting) — traces beginning elsewhere are out of view. */
   visibleSources?: string[]
   /** the map's center (root) node id — safeguards only apply to traces that invoke it */
@@ -83,7 +84,7 @@ function timeAgo(iso: string): string {
   return `${Math.round(s / 86_400)}d ago`
 }
 
-export function TraceDrawer({ component, rev, running = true, title, initialSource, restrictSources, visibleSources, fix, evidenceNote, rootId, safeguardsEnabled = false, onClose, onSafeguards }: Props) {
+export function TraceDrawer({ component, rev, running = true, title, initialSource, edge, visibleSources, fix, evidenceNote, rootId, safeguardsEnabled = false, onClose, onSafeguards }: Props) {
   const [view, setView] = useState<'traces' | 'fix'>('traces')
   const [traces, setTraces] = useState<TraceSummary[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -107,38 +108,37 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
       return
     }
     setTraces(null)
-    api.traces(component, 40, rev, earliest, latest).then(setTraces).catch(() => setTraces([]))
-  }, [component, rev, running, earliest, latest])
+    api.traces(component, 40, rev, earliest, latest, edge).then(setTraces).catch(() => setTraces([]))
+  }, [component, rev, running, earliest, latest, edge])
 
   // when opened for a specific node, pre-select that source
   useEffect(() => {
     setSource(initialSource ?? 'all')
   }, [initialSource])
 
+  const [eligible, setEligible] = useState(false)
   useEffect(() => {
     if (!openId) return
     setDetail(null)
+    setEligible(false)
     api.trace(openId).then(setDetail).catch(() => setDetail(null))
-  }, [openId])
+    // safeguard eligibility is the backend's verdict, not a client span scan
+    if (safeguardsEnabled && rootId) {
+      api.traceInvokes(openId, rootId).then((v) => setEligible(v.invoked)).catch(() => setEligible(false))
+    }
+  }, [openId, safeguardsEnabled, rootId])
 
-  // scope to the edge's flows when opened from a line click; otherwise all component traces
-  const restricted = useMemo(() => {
-    if (!traces) return null
-    if (!restrictSources) return traces
-    const allow = new Set(restrictSources)
-    return traces.filter((t) => allow.has(t.entryService))
-  }, [traces, restrictSources])
-
-  // …then to traces beginning at a service that's actually on the map (node-depth setting)
+  // edge scoping happens in the query itself; here we only narrow to services on the map
+  // (node-depth setting), which is this client's own view scope
   const scoped = useMemo(() => {
-    if (!restricted) return null
-    if (!visibleSources) return restricted
+    if (!traces) return null
+    if (!visibleSources) return traces
     const vis = new Set(visibleSources)
-    return restricted.filter((t) => vis.has(t.entryService))
-  }, [restricted, visibleSources])
+    return traces.filter((t) => vis.has(t.entryService))
+  }, [traces, visibleSources])
 
   // true when traces exist but every one of them begins beyond the current node depth
-  const depthHidesAll = scoped?.length === 0 && (restricted?.length ?? 0) > 0
+  const depthHidesAll = scoped?.length === 0 && (traces?.length ?? 0) > 0
 
   const sources = useMemo(() => {
     const set = new Set((scoped ?? []).map((t) => t.entryService))
@@ -341,7 +341,7 @@ export function TraceDrawer({ component, rev, running = true, title, initialSour
                       <>
                         <TraceWaterfall detail={detail} />
                         {/* safeguards protect the root service — only traces that invoke it qualify */}
-                        {safeguardsEnabled && (!rootId || detail.spans.some((sp) => sp.nodeId === rootId)) && (
+                        {safeguardsEnabled && eligible && (
                           <div className="mt-4 flex justify-end">
                             <Button variant="primary" onClick={() => onSafeguards(t.traceId)}>
                               <Icon name="shield" size={14} className="mr-1.5" />
@@ -457,10 +457,15 @@ function SilentEdgeEvidence({
   fix: Extract<EdgeFix, { kind: 'silent' }>
 }) {
   const [wiki, setWiki] = useState<WikiDoc | null>(null)
+  const [finding, setFinding] = useState<SilentEdgeFinding | null>(null)
 
   useEffect(() => {
     api.nodeWiki(component, fix.sourceId).then(setWiki).catch(() => setWiki(null))
-  }, [component, fix.sourceId])
+    api
+      .silentEdgeFinding(component, fix.sourceId, fix.targetId)
+      .then(setFinding)
+      .catch(() => setFinding(null))
+  }, [component, fix.sourceId, fix.targetId])
 
   const depsPage = wiki?.pages.find((pg) => pg.title === 'Dependencies')
 
@@ -468,10 +473,11 @@ function SilentEdgeEvidence({
     <div className="space-y-5">
       <div className="rounded-md border border-stroke bg-surface-secondary p-3 text-sm">
         <p className="font-medium text-primary">Mapped, but No Traffic Observed</p>
-        <p className="mt-1 text-secondary">
-          DeepWiki documents this dependency, yet SPLOC recorded zero calls across it in the live
-          window. Either the calls aren’t instrumented, or the code path is stale.
-        </p>
+        {finding ? (
+          <p className="mt-1 text-secondary">{finding.summary}</p>
+        ) : (
+          <Skeleton className="mt-2 h-8" />
+        )}
       </div>
 
       <div>
@@ -497,36 +503,35 @@ function SilentEdgeEvidence({
         )}
       </div>
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">What This Usually Means</h3>
-        <ul className="space-y-1.5 text-sm text-secondary">
-          <li className="flex gap-2">
-            <span className="text-accent">•</span>
-            <span>
-              <span className="font-medium text-primary">Observability gap</span>: the calls happen,
-              but {fix.sourceName} isn’t propagating trace context on this path, so SPLOC never sees
-              them.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-accent">•</span>
-            <span>
-              <span className="font-medium text-primary">Stale code</span>: the dependency exists in
-              the repository but the path is never exercised anymore; the code (and the coupling) may
-              be removable.
-            </span>
-          </li>
-        </ul>
-      </div>
+      {finding && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-primary">What This Usually Means</h3>
+          <ul className="space-y-1.5 text-sm text-secondary">
+            {finding.meanings.map((m) => (
+              <li key={m.title} className="flex gap-2">
+                <span className="text-accent">•</span>
+                <span>
+                  <span className="font-medium text-primary">{m.title}</span>: {m.body}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Next Steps</h3>
-        <ul className="space-y-1.5 text-sm text-secondary">
-          <li className="flex gap-2"><span className="text-accent">•</span>Verify tracing instrumentation on {fix.sourceName}’s outbound {fix.edgeKindLabel} client.</li>
-          <li className="flex gap-2"><span className="text-accent">•</span>Run a synthetic through the path. If it appears on the map, it was an instrumentation gap.</li>
-          <li className="flex gap-2"><span className="text-accent">•</span>If genuinely unused, remove the dependency and let the next DeepWiki run clear the edge.</li>
-        </ul>
-      </div>
+      {finding && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-primary">Suggested Next Steps</h3>
+          <ul className="space-y-1.5 text-sm text-secondary">
+            {finding.nextSteps.map((step) => (
+              <li key={step} className="flex gap-2">
+                <span className="text-accent">•</span>
+                {step}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

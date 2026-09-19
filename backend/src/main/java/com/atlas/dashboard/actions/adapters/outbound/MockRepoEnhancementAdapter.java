@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.atlas.dashboard.actions.domain.EnhancementPlan;
+import com.atlas.dashboard.actions.domain.SilentEdgeFinding;
 import com.atlas.dashboard.actions.ports.outbound.RepoEnhancementPort;
 import com.atlas.dashboard.common.TopologyFixture;
 
@@ -18,19 +19,11 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
     private final TopologyFixture fixture;
 
     @Override
-    public Mono<EnhancementPlan> plan(String component) {
+    public Mono<EnhancementPlan> plan(String component, List<String> gapIds) {
         return Mono.fromSupplier(() -> {
             String slug = fixture.slug(component);
             boolean owned = fixture.isOwned(slug);
 
-            // stay consistent with the map: only propose a fix when this component actually has
-            // an outgoing live edge with no logs (the amber dashes in the graph)
-            List<String> gapIds = fixture.edgeObservations(component).values().stream()
-                    .filter(o -> o.observed() && !o.hasLogs())
-                    .map(o -> o.edgeId())
-                    .filter(id -> id.startsWith(slug + "->"))
-                    .map(id -> id.substring(id.indexOf("->") + 2))
-                    .toList();
             List<String> gapTargets = gapIds.stream()
                     .map(id -> {
                         var spec = fixture.spec(id);
@@ -134,5 +127,37 @@ public class MockRepoEnhancementAdapter implements RepoEnhancementPort {
                     diff,
                     List.of("grafana: rate(" + slug + " → " + targetSlug + " errors) > threshold for 5m → page owning team"));
         });
+    }
+
+    @Override
+    public Mono<SilentEdgeFinding> silentEdgeFinding(String component, String sourceId, String targetId) {
+        return Mono.fromSupplier(() -> {
+            String source = name(sourceId);
+            String target = name(targetId);
+            return new SilentEdgeFinding(
+                    "DeepWiki documents this dependency, yet SPLOC recorded zero calls across it in"
+                            + " the live window. Either the calls aren't instrumented, or the code"
+                            + " path is stale.",
+                    List.of(
+                            new SilentEdgeFinding.Item("Observability gap",
+                                    "The calls happen, but " + source + " isn't propagating trace"
+                                            + " context on this path, so SPLOC never sees them."),
+                            new SilentEdgeFinding.Item("Stale code",
+                                    "The dependency exists in the repository but the path is never"
+                                            + " exercised anymore; the code (and the coupling) may"
+                                            + " be removable.")),
+                    List.of(
+                            "Verify tracing instrumentation on " + source + "'s outbound client for "
+                                    + target + ".",
+                            "Run a synthetic through the path. If it appears on the map, it was an"
+                                    + " instrumentation gap.",
+                            "If genuinely unused, remove the dependency and let the next DeepWiki"
+                                    + " run clear the edge."));
+        });
+    }
+
+    private String name(String nodeId) {
+        var spec = fixture.spec(nodeId);
+        return spec != null ? spec.name() : nodeId;
     }
 }

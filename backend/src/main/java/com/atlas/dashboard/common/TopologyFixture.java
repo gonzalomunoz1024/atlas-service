@@ -171,6 +171,9 @@ public class TopologyFixture {
     }
 
     public NodeSpec spec(String nodeId) {
+        if (S3_NODE.id().equals(nodeId)) {
+            return S3_NODE;
+        }
         return NODES.stream().filter(n -> n.id().equals(nodeId)).findFirst().orElse(null);
     }
 

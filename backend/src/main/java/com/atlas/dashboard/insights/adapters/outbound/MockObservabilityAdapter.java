@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.atlas.dashboard.common.TopologyFixture;
 import com.atlas.dashboard.common.domain.EdgeObservation;
+import com.atlas.dashboard.insights.domain.EndpointStat;
 import com.atlas.dashboard.insights.ports.outbound.ObservabilityPort;
 
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,23 @@ public class MockObservabilityAdapter implements ObservabilityPort {
                 rates.put(o.edgeId(), Math.min(1.0, Math.max(0.0, rate)));
             }
             return rates;
+        });
+    }
+
+    @Override
+    public Mono<java.util.List<EndpointStat>> endpointStats(String nodeId, int windowMin) {
+        // deterministic per 2-minute bucket, like windowedErrorRates, so repeated polls agree
+        return Mono.fromSupplier(() -> {
+            long bucket = clock.instant().getEpochSecond() / 120;
+            java.util.List<EndpointStat> stats = new java.util.ArrayList<>();
+            for (String ep : fixture.endpoints(nodeId)) {
+                Random r = new Random(Objects.hash(nodeId, ep, windowMin, bucket));
+                int calls = 20 + r.nextInt(400);
+                int avg = 15 + r.nextInt(220);
+                double err = Math.round(r.nextDouble() * 40.0) / 10.0;
+                stats.add(new EndpointStat(ep, calls, avg, err));
+            }
+            return stats;
         });
     }
 }

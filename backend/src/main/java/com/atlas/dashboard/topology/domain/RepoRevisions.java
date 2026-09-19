@@ -11,10 +11,10 @@ import java.util.List;
 public record RepoRevisions(List<Environment> environments, List<CommitRef> commits) {
 
     /** A deployed environment: what commit/image is currently running there. */
-    public record Environment(String env, String commitHash, String image) {
+    public record Environment(String env, String commitHash, String image, boolean running) {
     }
 
     /** A recent commit; {@code deployedEnv} names the environment running it, or null if none. */
-    public record CommitRef(String hash, String message, String deployedEnv) {
+    public record CommitRef(String hash, String message, String deployedEnv, boolean running) {
     }
 }

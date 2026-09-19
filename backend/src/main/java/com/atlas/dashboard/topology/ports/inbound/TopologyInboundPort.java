@@ -3,6 +3,7 @@ package com.atlas.dashboard.topology.ports.inbound;
 import java.util.List;
 
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.BlastRadius;
 import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
@@ -31,4 +32,7 @@ public interface TopologyInboundPort {
 
     /** OpenShift cluster deployments for an app node (empty for non-app nodes). */
     Mono<List<ClusterDeployment>> deployments(String component, String nodeId);
+
+    /** Transitive callers a failure at the node would hurt, scoped to the viewed depth. */
+    Mono<BlastRadius> blastRadius(String component, String nodeId, String rev, Integer maxDepth);
 }

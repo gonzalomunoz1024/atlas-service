@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.atlas.dashboard.topology.application.TopologyUseCase;
 import com.atlas.dashboard.topology.domain.ApiOperation;
+import com.atlas.dashboard.topology.domain.BlastRadius;
 import com.atlas.dashboard.topology.domain.ClusterDeployment;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
@@ -71,6 +72,14 @@ public class RestControllerTopologyAdapter implements TopologyInboundPort {
     @GetMapping("/components/{component}/nodes/{nodeId}/openapi")
     public Mono<List<ApiOperation>> apiSpec(@PathVariable String component, @PathVariable String nodeId) {
         return useCase.apiSpec(component, nodeId);
+    }
+
+    @Override
+    @GetMapping("/components/{component}/nodes/{nodeId}/blast-radius")
+    public Mono<BlastRadius> blastRadius(@PathVariable String component, @PathVariable String nodeId,
+            @RequestParam(required = false) String rev,
+            @RequestParam(required = false) Integer maxDepth) {
+        return useCase.blastRadius(component, nodeId, rev, maxDepth);
     }
 
     @Override

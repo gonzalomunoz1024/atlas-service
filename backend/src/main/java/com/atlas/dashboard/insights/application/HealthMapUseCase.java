@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.atlas.dashboard.insights.domain.DepthScope;
 import com.atlas.dashboard.insights.domain.EdgeHealthStatus;
+import com.atlas.dashboard.insights.domain.EndpointStat;
 import com.atlas.dashboard.insights.domain.HealthEdge;
 import com.atlas.dashboard.insights.domain.HealthMap;
 import com.atlas.dashboard.insights.domain.MissingLinkDetector;
@@ -44,6 +45,11 @@ public class HealthMapUseCase implements InsightsInboundPort {
                             MissingLinkDetector.coverage(edges));
                     return maxDepth != null ? DepthScope.apply(map, maxDepth) : map;
                 });
+    }
+
+    @Override
+    public Mono<List<EndpointStat>> endpointStats(String component, String nodeId, int windowMin) {
+        return observability.endpointStats(nodeId, windowMin);
     }
 
     @Override

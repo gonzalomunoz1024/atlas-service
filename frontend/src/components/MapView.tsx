@@ -3,7 +3,6 @@ import { api } from '../lib/api'
 import type { ComponentNode, EndpointFlow, HealthEdge, HealthMap, NodeKind } from '../types/atlas'
 import type { ThemeMode } from '../hooks/useTheme'
 import { useFlowStream } from '../hooks/useFlowStream'
-import { blastRadius } from '../lib/graphAnalysis'
 import { AppHeader } from './AppHeader'
 import { ErrorBoundary } from './ErrorBoundary'
 import { GraphCanvas, type GraphHandle } from './GraphCanvas'
@@ -52,7 +51,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
   const [endpointFilter, setEndpointFilter] = useState<string>('all')
   const [showTable, setShowTable] = useState(false)
   const [hiddenKinds, setHiddenKinds] = useState<Set<NodeKind>>(new Set())
-  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; restrictSources?: string[]; fix?: EdgeFix; evidenceNote?: string; safeguards?: boolean } | null>(null)
+  const [traceCtx, setTraceCtx] = useState<{ title?: string; source?: string; edge?: string; fix?: EdgeFix; evidenceNote?: string; safeguards?: boolean } | null>(null)
   const [syntheticTrace, setSyntheticTrace] = useState<{ traceId: string; node?: string; endpoint?: string; fromChooser?: boolean } | null>(null)
   const [callDetail, setCallDetail] = useState<IncomingTrace | null>(null)
   const [alertTrace, setAlertTrace] = useState<string | null>(null)
@@ -105,7 +104,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         setRevisions(rev)
         const prod = rev.environments.find((e) => e.env === 'prod') ?? rev.environments[0]
         if (prod) {
-          setRepoView({ label: prod.env, commitHash: prod.commitHash, image: prod.image, running: true })
+          setRepoView({ label: prod.env, commitHash: prod.commitHash, image: prod.image, running: prod.running })
         }
       })
       .catch(() => {})
@@ -273,11 +272,6 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       const tgt = idOf(edge.target)
       const edgeId = `${src}->${tgt}`
       graphRef.current?.pulse(edgeId)
-      // which flows (by origin) traverse this edge → restrict the trace list to those sources
-      const originNames: string[] = []
-      flowEdgesByOrigin.forEach((edges, origin) => {
-        if (edges.has(edgeId)) originNames.push(nameOf(origin))
-      })
       // problem edges (amber missing-logs / red error-rate) get a Fix suggestion tab —
       // but an undeployed commit has no observability, so there's nothing to diagnose
       let fix: EdgeFix | undefined
@@ -291,6 +285,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
           sourceName: nameOf(src),
           targetName: nameOf(tgt),
           sourceId: src,
+          targetId: tgt,
           edgeKindLabel: EDGE_KIND_LABEL[edge.kind],
         }
       } else if (edgeRates.get(edgeId)?.status === 'error') {
@@ -311,13 +306,13 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
       const center = map?.nodes.find((n) => n.center)?.id
       setTraceCtx({
         title: `${nameOf(src)} → ${nameOf(tgt)}`,
-        restrictSources: originNames,
+        edge: edgeId,
         fix,
         evidenceNote,
         safeguards: src === center || tgt === center,
       })
     },
-    [flowEdgesByOrigin, nameOf, edgeRates, healthSettings, repoView],
+    [map, nameOf, edgeRates, healthSettings, repoView],
   )
 
   // grey-body click on a non-root node: focus the live flow originating from it (toggles off)
@@ -348,14 +343,17 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
 
   const showBlast = useCallback(
     (node: ComponentNode) => {
-      if (!map) return
-      // over the links in view, so the count always matches what the map shows
-      const affected = blastRadius(node.id, map.edges)
-      setFlowSource(null)
-      setHighlight(affected)
-      setBlast({ node: node.name, count: affected.size - 1 })
+      // the traversal is the backend's rule; depth keeps the count honest to the view
+      api
+        .blastRadius(component, node.id, revCommit, depthQuery)
+        .then((b) => {
+          setFlowSource(null)
+          setHighlight(new Set(b.impactedNodeIds))
+          setBlast({ node: node.name, count: b.impactedNodeIds.length - 1 })
+        })
+        .catch(() => {})
     },
-    [map],
+    [component, revCommit, depthQuery],
   )
 
   const clearHighlight = useCallback(() => {
@@ -662,7 +660,7 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
             running={running}
             title={traceCtx.title}
             initialSource={traceCtx.source}
-            restrictSources={traceCtx.restrictSources}
+            edge={traceCtx.edge}
             visibleSources={map.nodes.map((n) => n.name)}
             rootId={map.nodes.find((n) => n.center)?.id}
             safeguardsEnabled={traceCtx.safeguards ?? false}
@@ -726,8 +724,9 @@ export function MapView({ component, themeMode, onCycleTheme, onHome, onOpenComp
         )}
         {callDetail && inspect && (
           <CallDetailModal
+            component={component}
+            nodeId={inspect.id}
             call={callDetail}
-            recent={incoming}
             onClose={() => setCallDetail(null)}
             onSafeguards={(traceId, endpoint) => {
               setCallDetail(null)
