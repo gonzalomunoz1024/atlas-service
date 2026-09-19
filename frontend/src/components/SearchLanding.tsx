@@ -68,7 +68,7 @@ export function SearchLanding({ onOpen }: { onOpen: (name: string) => void }) {
           The map, the traffic, and the gaps between them.
         </p>
 
-        <div className="animate-fade-in relative mt-10" style={reveal(3)}>
+        <div className="animate-fade-in relative mt-8" style={reveal(3)}>
           <div
             className={cx(
               'flex items-center gap-3 rounded-xl border bg-surface px-5 py-4 transition-all duration-[250ms]',
