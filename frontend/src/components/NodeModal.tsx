@@ -60,7 +60,9 @@ export function NodeModal({ component, node, edges, running = true, initialTab =
   }, [tab, wiki, component, node.id])
 
   return (
-    <Modal onClose={onClose} width="max-w-4xl">
+    // fixed, viewport-relative height: every tab renders in the same frame (content
+    // scrolls) instead of the modal resizing per tab
+    <Modal onClose={onClose} width="max-w-4xl" panelClassName="h-[min(85vh,800px)]">
       <Header node={node} running={running} />
 
       {/* tabs */}
