@@ -11,7 +11,6 @@ import com.atlas.dashboard.common.TopologyFixture;
 import com.atlas.dashboard.topology.domain.ApiOperation;
 import com.atlas.dashboard.topology.domain.ComponentGraph;
 import com.atlas.dashboard.topology.domain.ComponentSummary;
-import com.atlas.dashboard.topology.domain.EndpointFlow;
 import com.atlas.dashboard.topology.domain.RepoRevisions;
 import com.atlas.dashboard.topology.domain.WikiDoc;
 import com.atlas.dashboard.topology.domain.WikiDoc.WikiPage;
